@@ -1,0 +1,34 @@
+{
+	"appId": "com.bookmebusiness.customerapp1",
+	"appName": "BookMe Customer",
+	"webDir": "dist",
+	"server": {
+		"cleartext": true
+	},
+	"ios": {
+		"contentInset": "always",
+		"scrollEnabled": true
+	},
+	"plugins": {
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		},
+		"StatusBar": {
+			"overlaysWebView": true,
+			"style": "DARK",
+			"backgroundColor": "#00000000"
+		},
+		"Assets": {
+			"inputPath": "assets/logo.jpg"
+		}
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"GeolocationPlugin",
+		"PushNotificationsPlugin"
+	]
+}

@@ -1,0 +1,108 @@
+
+> vite_react_shadcn_ts@10.5.0 lint
+> eslint .
+
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\android\app\build\intermediates\assets\debug\mergeDebugAssets\native-bridge.js
+    36:5   warning  Unused eslint-disable directive (no problems were reported)
+   208:29  warning  Unused eslint-disable directive (no problems were reported from 'no-prototype-builtins')
+  1013:13  error    Definition for rule '@typescript-eslint/no-unused-vars' was not found                     @typescript-eslint/no-unused-vars
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\android\app\build\intermediates\assets\release\mergeReleaseAssets\native-bridge.js
+    36:5   warning  Unused eslint-disable directive (no problems were reported)
+   208:29  warning  Unused eslint-disable directive (no problems were reported from 'no-prototype-builtins')
+  1013:13  error    Definition for rule '@typescript-eslint/no-unused-vars' was not found                     @typescript-eslint/no-unused-vars
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ChatWindow.tsx
+  51:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\button.tsx
+  56:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\command.tsx
+  24:11  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\form.tsx
+  129:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\sidebar.tsx
+  636:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\sonner.tsx
+  27:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\textarea.tsx
+  5:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\components\ui\toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\contexts\AuthContext.tsx
+  40:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\contexts\NotificationContext.tsx
+  29:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\hooks\useCustomerPoints.ts
+  119:13  error  'upsertError' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\pages\ChatsPage.tsx
+  137:45  warning  React Hook useEffect has a missing dependency: 'loadConversations'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  156:6   warning  React Hook useEffect has a missing dependency: 'loadConversations'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\pages\ProviderProfilePage.tsx
+   39:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   42:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   45:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   56:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  352:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  368:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  395:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  445:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  450:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  840:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\pages\ReferralPage.tsx
+  77:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\pages\ReferralSourcePage.tsx
+  69:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\pages\SavedProvidersPage.tsx
+  13:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\pages\SearchPage.tsx
+  120:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  126:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  129:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\services\capacitor.ts
+   15:1   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-var-requires')
+   16:17  error    Unexpected any. Specify a different type                                                               @typescript-eslint/no-explicit-any
+   17:25  error    Unexpected any. Specify a different type                                                               @typescript-eslint/no-explicit-any
+   18:19  error    Unexpected any. Specify a different type                                                               @typescript-eslint/no-explicit-any
+   23:16  error    A `require()` style import is forbidden                                                                @typescript-eslint/no-require-imports
+  133:20  error    Unexpected any. Specify a different type                                                               @typescript-eslint/no-explicit-any
+  134:27  error    Unexpected any. Specify a different type                                                               @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\src\services\notifications.ts
+   78:11  error  Empty block statement                     no-empty
+  150:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  151:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\supabase\functions\send-notification\index.ts
+  15:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\HP\Downloads\Book Me\bookme-customer\.v2\tailwind.config.ts
+  106:13  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+Γ£û 50 problems (34 errors, 16 warnings)
+  1 error and 5 warnings potentially fixable with the `--fix` option.
+

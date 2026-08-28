@@ -1,0 +1,82 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { Database } from "@/integrations/supabase/types";
+
+export type ProviderProfile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Service = Database["public"]["Tables"]["services"]["Row"];
+
+export const useProviders = () => {
+  const [providers, setProviders] = useState<ProviderProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProviders = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("role", "provider")
+        .eq("is_active", true);
+
+      if (error) throw error;
+      setProviders(data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProviders();
+  }, []);
+
+  return { providers, loading, error, refresh: fetchProviders };
+};
+
+export const useProviderDetail = (id: string) => {
+  const [provider, setProvider] = useState<ProviderProfile | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDetail = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch profile
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (profileError) throw profileError;
+        setProvider(profileData);
+
+        // Fetch services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from("services")
+          .select("*")
+          .eq("provider_id", id)
+          .eq("is_active", true);
+
+        if (servicesError) throw servicesError;
+        setServices(servicesData || []);
+
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetail();
+  }, [id]);
+
+  return { provider, services, loading, error };
+};

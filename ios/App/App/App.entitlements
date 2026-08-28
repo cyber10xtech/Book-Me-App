@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Push notifications (change to "production" for App Store builds) -->
+	<key>aps-environment</key>
+	<string>development</string>
+
+	<!-- Universal Links: intercepts https://bookme.app/* and opens this app -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:bookme.app</string>
+		<string>applinks:www.bookme.app</string>
+		<string>applinks:business.bookmebusiness.com</string>
+		<string>webcredentials:bookme.app</string>
+	</array>
+</dict>
+</plist>

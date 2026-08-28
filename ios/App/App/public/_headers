@@ -1,0 +1,37 @@
+# Cloudflare CDN Cache Headers
+# Placed in /public so Vite copies it to the dist root at build time.
+#
+# Strategy:
+#   /assets/*        → 1 year, immutable  (Vite hashes every filename)
+#   /index.html      → no-cache           (always revalidate for fresh deploy)
+#   /sw.js           → no-cache           (service worker must never be stale)
+#   static files     → 1 day              (icons, robots, placeholder)
+#   API / Supabase   → handled server-side, not here
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  CF-Cache-Status: HIT
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+  Service-Worker-Allowed: /
+
+/favicon.ico
+  Cache-Control: public, max-age=86400
+
+/favicon.svg
+  Cache-Control: public, max-age=86400
+
+/placeholder.svg
+  Cache-Control: public, max-age=86400
+
+/robots.txt
+  Cache-Control: public, max-age=86400
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin

@@ -1,0 +1,42 @@
+require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
+
+# iOS 15.0 — minimum required by both Capacitor 8.x and Firebase 12.x.
+# Build with Xcode 26 / iOS 26 SDK (mandatory for App Store since April 28, 2026).
+platform :ios, '15.0'
+use_frameworks!
+
+install! 'cocoapods', :disable_input_output_paths => true
+
+def capacitor_pods
+  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+  pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
+  pod 'CapacitorGeolocation', :path => '../../node_modules/@capacitor/geolocation'
+  pod 'CapacitorPushNotifications', :path => '../../node_modules/@capacitor/push-notifications'
+end
+
+target 'App' do
+  capacitor_pods
+
+  # Firebase 12.x — latest stable.
+  # Requires: Xcode 26 (Swift 6 toolchain), CocoaPods >= 1.12.0, iOS 15+.
+  # Note: set SWIFT_VERSION = 5 per target to avoid strict-concurrency errors
+  # in your own code; Firebase 12 needs the toolchain, not Swift 6 language mode.
+  pod 'Firebase/Messaging',   '~> 12.0'
+  pod 'Firebase/Analytics',   '~> 12.0'
+  pod 'Firebase/Crashlytics', '~> 12.0'
+end
+
+post_install do |installer|
+  assertDeploymentTarget(installer)
+
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      # Enforce iOS 15 deployment target across all pods
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      # Swift 5 language mode — Firebase 12 needs the Swift 6 toolchain (Xcode 26)
+      # but does NOT require Swift 6 language mode in consuming targets.
+      config.build_settings['SWIFT_VERSION'] = '5.0'
+    end
+  end
+end
