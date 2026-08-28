@@ -28,7 +28,10 @@
 	},
 	"packageClassList": [
 		"AppPlugin",
+		"ClipboardPlugin",
 		"GeolocationPlugin",
-		"PushNotificationsPlugin"
+		"PushNotificationsPlugin",
+		"InstallReferrerPlugin",
+		"CapacitorUpdaterPlugin"
 	]
 }

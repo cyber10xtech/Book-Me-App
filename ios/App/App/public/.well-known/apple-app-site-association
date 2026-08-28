@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["TEAMID.com.bookmebusiness.customerapp1"],
+        "appIDs": ["L4TKDN4H8W.com.bookmebusiness.customerapp1"],
         "components": [
           { "/": "/p/*",        "comment": "Provider profile via slug" },
           { "/": "/provider/*", "comment": "Provider profile via ID" }
@@ -11,6 +11,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["TEAMID.com.bookmebusiness.customerapp1"]
+    "apps": ["L4TKDN4H8W.com.bookmebusiness.customerapp1"]
   }
 }
