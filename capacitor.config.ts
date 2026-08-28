@@ -35,6 +35,9 @@ const config: CapacitorConfig = {
     Assets: {
       inputPath: 'assets/logo.jpg',
     },
+    CapacitorUpdater: {
+      appId: 'com.bookmebusiness.customerapp1',
+    },
   },
 };
 
