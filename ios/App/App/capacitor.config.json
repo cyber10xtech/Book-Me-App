@@ -24,9 +24,6 @@
 		},
 		"Assets": {
 			"inputPath": "assets/logo.jpg"
-		},
-		"CapacitorUpdater": {
-			"appId": "com.bookmebusiness.customerapp1"
 		}
 	},
 	"packageClassList": [
@@ -34,7 +31,6 @@
 		"ClipboardPlugin",
 		"GeolocationPlugin",
 		"PushNotificationsPlugin",
-		"InstallReferrerPlugin",
-		"CapacitorUpdaterPlugin"
+		"InstallReferrerPlugin"
 	]
 }

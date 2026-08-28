@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'BookMe Customer',
   webDir: 'dist',
   server: {
-    cleartext: true,
+    cleartext: true
   },
   ios: {
     // Capacitor 8: content renders edge-to-edge under the status bar.
@@ -23,22 +23,19 @@ const config: CapacitorConfig = {
   },
   plugins: {
     PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
-    },
+      presentationOptions: ['badge', 'sound', 'alert']
+  },
     // StatusBar plugin controls the iOS status bar appearance.
     // Capacitor 8 introduced SystemBars for Android; iOS still uses StatusBar.
     StatusBar: {
       overlaysWebView: true,
       style: 'DARK',
-      backgroundColor: '#00000000',
-    },
-    Assets: {
-      inputPath: 'assets/logo.jpg',
-    },
-    CapacitorUpdater: {
-      appId: 'com.bookmebusiness.customerapp1',
-    },
+      backgroundColor: '#00000000'
   },
-};
+    Assets: {
+      inputPath: 'assets/logo.jpg'
+  }
+  }
+  };
 
 export default config;
