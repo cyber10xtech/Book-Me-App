@@ -142,8 +142,13 @@ const AppContent = () => {
       .select("referral_source")
       .eq("user_id", user.id)
       .single()
-      .then(({ data }) => {
-        setNeedsReferral(!data?.referral_source);
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("Failed to fetch referral status (offline?), skipping gate:", error);
+          setNeedsReferral(false);
+        } else {
+          setNeedsReferral(!data?.referral_source);
+        }
         setProfileLoaded(true);
       });
   }, [user, loading]);
