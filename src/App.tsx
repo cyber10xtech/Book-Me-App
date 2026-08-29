@@ -143,13 +143,8 @@ const AppContent = () => {
       .select("referral_source")
       .eq("user_id", user.id)
       .single()
-      .then(({ data, error }) => {
-        if (error) {
-          console.warn("Failed to fetch referral status (offline?), skipping gate:", error);
-          setNeedsReferral(false);
-        } else {
-          setNeedsReferral(!data?.referral_source);
-        }
+      .then(({ data }) => {
+        setNeedsReferral(!data?.referral_source);
         setProfileLoaded(true);
       });
   }, [user, loading]);
@@ -189,23 +184,23 @@ const AppContent = () => {
     }
   }, [user, shouldShowModal]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-
   return (
     <>
       <UpdateDialog />
-      {showPermissionModal && (
-        <PermissionModal
-          onContinue={async () => { await requestAllPermissions(); setShowPermissionModal(false); }}
-          onDismiss={() => { markModalShown(); setShowPermissionModal(false); }}
-        />
-      )}
+      {loading ? (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <>
+          {showPermissionModal && (
+            <PermissionModal
+              onContinue={async () => { await requestAllPermissions(); setShowPermissionModal(false); }}
+              onDismiss={() => { markModalShown(); setShowPermissionModal(false); }}
+            />
+          )}
 
-      <div className="app-shell-width min-h-screen bg-background relative overflow-y-auto overflow-x-hidden">
+          <div className="app-shell-width min-h-screen bg-background relative overflow-y-auto overflow-x-hidden">
         <Routes>
           {/* ── Guest-mode default entry — no forced login/register screen ──── */}
           <Route path="/" element={<Navigate to="/home" replace />} />
@@ -257,6 +252,8 @@ const AppContent = () => {
         </Routes>
       </div>
     </>
+    )}
+  </>
   );
 };
 
