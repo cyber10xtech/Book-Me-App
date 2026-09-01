@@ -64,6 +64,7 @@ describe('openStoreUrl', () => {
 describe('UpdateDialog Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
     vi.mocked(CapApp.addListener).mockImplementation(() => Promise.resolve({ remove: vi.fn() }));
     vi.mocked(CapApp.openUrl).mockResolvedValue(undefined);
   });
