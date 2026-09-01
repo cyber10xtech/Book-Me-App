@@ -19,7 +19,7 @@
     <meta name="twitter:title" content="BookMe Customer — Book Any Service in Nigeria">
     <meta property="og:description" content="Book salons, barbers, makeup artists, mechanics and more — all in one app. 500+ verified professionals across Nigeria.">
     <meta name="twitter:description" content="Book salons, barbers, makeup artists, mechanics and more — all in one app. 500+ verified professionals across Nigeria.">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/jpeg" href="https://customer.bookmebusiness.com/favicon.jpg">
 
     <style>
       /*
@@ -38,48 +38,30 @@
 
       /* Prevent the default bounce-scroll from showing a white/black gap
          above the status bar on iOS. Use the app's surface colour here. */
-      html {
-        background-color: hsl(210 20% 97%);
-        overscroll-behavior: none;
-        overflow-x: hidden;
-        overflow-y: auto;
-        width: 100%;
-      }
-
       html, body {
-        /* Lock touch panning to vertical scroll only — prevents the page
-           from ever being dragged left/right, no matter what content does. */
-        touch-action: pan-y;
-      }
-
-      body {
+        background-color: hsl(210 20% 97%);
         margin: 0;
         padding: 0;
-        overscroll-behavior: none;
-        overflow-x: hidden;
-        overflow-y: auto;
         width: 100%;
-        max-width: 100vw;
-        /* Safe-area padding is handled by index.css — do NOT duplicate here
-           or pages will double-pad (index.css @layer base rule already applies
-           padding-top: env(safe-area-inset-top) via the html/body block). */
+        min-height: 100%;
+        /* Force scroll container behavior */
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
       }
 
       #root {
-        overflow-x: hidden;
-        overflow-y: visible;
         width: 100%;
-        max-width: 100vw;
+        min-height: 100%;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-HPRu78AA.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/react-vendor-B-MftiQD.js">
-    <link rel="modulepreload" crossorigin href="/assets/query-vendor-n3qNK5xm.js">
-    <link rel="modulepreload" crossorigin href="/assets/router-vendor-U5W9rmKG.js">
-    <link rel="modulepreload" crossorigin href="/assets/radix-vendor-BSlWqpF6.js">
-    <link rel="modulepreload" crossorigin href="/assets/capacitor-vendor-C3bT2r27.js">
-    <link rel="modulepreload" crossorigin href="/assets/supabase-vendor-Lt8he4Ox.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-B1T9l4Xb.css">
+    <script type="module" crossorigin src="https://customer.bookmebusiness.com/assets/index-CiDNqI3W.js"></script>
+    <link rel="modulepreload" crossorigin href="https://customer.bookmebusiness.com/assets/react-vendor-B-MftiQD.js">
+    <link rel="modulepreload" crossorigin href="https://customer.bookmebusiness.com/assets/query-vendor-n3qNK5xm.js">
+    <link rel="modulepreload" crossorigin href="https://customer.bookmebusiness.com/assets/router-vendor-DFdeFz1u.js">
+    <link rel="modulepreload" crossorigin href="https://customer.bookmebusiness.com/assets/radix-vendor-DpGVlcBX.js">
+    <link rel="modulepreload" crossorigin href="https://customer.bookmebusiness.com/assets/capacitor-vendor-CzIy2rdm.js">
+    <link rel="modulepreload" crossorigin href="https://customer.bookmebusiness.com/assets/supabase-vendor-Lt8he4Ox.js">
+    <link rel="stylesheet" crossorigin href="https://customer.bookmebusiness.com/assets/index-gPgDnmu0.css">
   </head>
 
   <body>

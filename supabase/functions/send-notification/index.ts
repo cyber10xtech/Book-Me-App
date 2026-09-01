@@ -126,21 +126,16 @@ async function sendFcmMessage(
             channel_id: "bookme_default",
           },
         },
-        // APNs config: content-available=1 wakes the app in the background
-        // and terminated state. alert + sound ensure the notification is
-        // displayed on screen. badge increments the app icon counter.
         apns: {
           headers: {
-            "apns-priority":   "10",
-            "apns-push-type":  "alert",
+            "apns-push-type": "alert",
+            "apns-priority": "10",
           },
           payload: {
             aps: {
               alert: { title, body },
-              sound:             "default",
-              badge:             1,
-              "content-available": 1,
-              "mutable-content":   1,
+              sound: "default",
+              badge: 1,
             },
           },
         },

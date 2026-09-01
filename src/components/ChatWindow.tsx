@@ -49,8 +49,7 @@ interface ChatWindowProps {
 }
 
 // ─── Chat notification helper ─────────────────────────────────────────────────
-const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
 
 async function notifyOtherUser(
   conversationId: string,
@@ -84,20 +83,15 @@ async function notifyOtherUser(
       is_read: false,
     });
 
-    await fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
-      method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${SUPABASE_ANON}`,
-      },
-      body: JSON.stringify({
+    await supabase.functions.invoke("send-notification", {
+      body: {
         user_id:            recipientProfileId,
         title,
         message:            body,
         type:               "message",
         related_booking_id: conv.booking_id ?? undefined,
         data: { conversation_id: conversationId, message_type: "text" },
-      }),
+      },
     });
   } catch (err) {
     console.warn("[chat] notifyOtherUser failed:", err);

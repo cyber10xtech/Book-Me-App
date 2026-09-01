@@ -104,18 +104,7 @@ const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Guard against iOS WKWebView getting stuck zoomed in: if a route change
-  // unmounts a focused <input>/<textarea> (e.g. tapping bottom-nav away from
-  // a search box or chat composer) before it's blurred, the browser skips
-  // its normal "reset viewport zoom on blur" step. Explicitly blurring the
-  // active element on every route change guarantees that cycle always runs.
-  //
-  // Also sweeps any leaked Radix scroll-lock (see scrollLockGuard.ts) on
-  // every navigation. A modal that was open on the previous screen should
-  // never leave scrolling blocked on the next one — if its own unmount
-  // cleanup didn't run (e.g. a render error interrupted it), this is the
-  // safety net that un-sticks it instead of the whole app appearing frozen
-  // until a manual reload.
+  // Guard against iOS WKWebView getting stuck zoomed in
   useEffect(() => {
     const active = document.activeElement as HTMLElement | null;
     if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
@@ -132,7 +121,6 @@ const AppContent = () => {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      // Not logged in — reset gate state so it's clean on next login
       setProfileLoaded(false);
       setNeedsReferral(false);
       return;
@@ -183,12 +171,6 @@ const AppContent = () => {
       return () => clearTimeout(t);
     }
   }, [user, shouldShowModal]);
-
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
 
   return (
     <>
