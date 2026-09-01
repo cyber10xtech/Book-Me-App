@@ -16,6 +16,7 @@ import { clearScrollLock } from "@/lib/scrollLockGuard";
 import { setupDeepLinkHandler, addPushNotificationListeners } from "@/services/capacitor";
 import { useDeepLinkRouter } from "@/hooks/useDeepLinkRouter";
 import { useDeferredDeepLink } from "@/hooks/useDeferredDeepLink";
+import { UpdateDialog } from "@/components/UpdateDialog";
 
 
 import SignIn from "./pages/SignIn";
@@ -191,6 +192,7 @@ const AppContent = () => {
 
   return (
     <>
+      <UpdateDialog />
       {showPermissionModal && (
         <PermissionModal
           onContinue={async () => { await requestAllPermissions(); setShowPermissionModal(false); }}
