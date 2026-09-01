@@ -11,6 +11,7 @@ import { getCurrentPosition, initCapacitor } from "@/services/capacitor";
 import { useCustomerPoints } from "@/hooks/useCustomerPoints";
 import ChatWindow from "@/components/ChatWindow";
 import { canMessageBooking } from "@/lib/messagingWindow";
+import HomeServiceNoticeModal from "@/components/HomeServiceNoticeModal";
 
 interface BookingFlowProps {
   providerId: string;
@@ -233,6 +234,21 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
   // Time-lock popup state
   const [showOutsideHours, setShowOutsideHours] = useState(false);
   const [outsideHoursLabel, setOutsideHoursLabel] = useState<string | undefined>();
+
+  // Home Service Notice modal state
+  const [showHomeNotice, setShowHomeNotice] = useState(false);
+  const [homeNoticeAcknowledged, setHomeNoticeAcknowledged] = useState(false);
+
+  const handleModeChange = (newMode: "at_shop" | "at_home") => {
+    if (newMode === "at_home") {
+      setMode("at_home");
+      if (!homeNoticeAcknowledged) {
+        setShowHomeNotice(true);
+      }
+    } else {
+      setMode("at_shop");
+    }
+  };
 
   const { user }    = useAuth();
   const navigate    = useNavigate();
@@ -750,7 +766,7 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
                   { key: "at_shop", Icon: Building2, title: "At Shop",  sub: "You visit the provider" },
                   { key: "at_home", Icon: Home,      title: "At Home",  sub: "Provider visits you"    },
                 ] as const).map(({ key, Icon, title, sub }) => (
-                  <button key={key} onClick={() => setMode(key)}
+                  <button key={key} onClick={() => handleModeChange(key)}
                     className="p-4 rounded-3xl flex flex-col items-center gap-2 tap-scale"
                     style={mode === key ? {
                       background: "hsl(var(--background))", boxShadow: "var(--shadow-pressed)",
@@ -931,7 +947,17 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
           )}
           <button
             disabled={!canAdvance || submitting}
-            onClick={() => step < 3 ? setStep(step + 1) : handleConfirm()}
+            onClick={() => {
+              if (step === 2 && mode === "at_home" && !homeNoticeAcknowledged) {
+                setShowHomeNotice(true);
+                return;
+              }
+              if (step < 3) {
+                setStep(step + 1);
+              } else {
+                handleConfirm();
+              }
+            }}
             className="flex-1 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-2 tap-scale disabled:opacity-40"
             style={{ height: 52, background: "linear-gradient(145deg, hsl(199 100% 50%), hsl(199 100% 38%))", boxShadow: "var(--shadow-sky)" }}>
             {step === 3
@@ -942,6 +968,22 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
             }
           </button>
         </div>
+
+        {/* Home Service Notice Modal */}
+        <HomeServiceNoticeModal
+          open={showHomeNotice}
+          onCancel={() => {
+            setShowHomeNotice(false);
+            if (!homeNoticeAcknowledged) {
+              setMode("at_shop");
+            }
+          }}
+          onUnderstand={() => {
+            setHomeNoticeAcknowledged(true);
+            setMode("at_home");
+            setShowHomeNotice(false);
+          }}
+        />
       </div>
     </div>
   );
