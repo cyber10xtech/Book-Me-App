@@ -119,7 +119,7 @@ const AppContent = () => {
   const [needsReferral, setNeedsReferral] = useState(false);
   const [isDeactivated, setIsDeactivated] = useState(false);
 
-  // Fetch profile once after auth resolves to check referral_source and is_active
+  // Fetch profile once after auth resolves & subscribe to realtime profile updates for is_active
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -139,6 +139,28 @@ const AppContent = () => {
         setNeedsReferral(!data?.referral_source);
         setProfileLoaded(true);
       });
+
+    const channel = supabase
+      .channel(`profile-active-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          if (payload.new && typeof payload.new.is_active === "boolean") {
+            setIsDeactivated(payload.new.is_active === false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, loading]);
 
   // Deep-link handler for push notification taps (background → foreground)
