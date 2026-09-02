@@ -34,10 +34,11 @@ const ReadableLocation = ({ value }: { value?: string | null }) => {
   return <>{location}</>;
 };
 
-const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, rescheduling }: {
+const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, rescheduling, onReview }: {
   b: any; onClose: () => void;
   onCancel: (id: string, reason: string) => Promise<void>; cancelling: boolean;
   onReschedule: (id: string, date: string, time: string, note: string) => Promise<void>; rescheduling: boolean;
+  onReview: () => void;
 }) => {
   const cfg = STATUS_CFG[b.status] ?? STATUS_CFG.pending;
   const canCancel = ["pending", "confirmed", "accepted", "rescheduled"].includes(b.status);
@@ -276,10 +277,18 @@ const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, reschedu
               </div>
             </div>
           )}
-          {b.status === "completed" && (
-            <div className="flex items-center justify-center gap-2 py-2">
-              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <p className="text-sm text-muted-foreground">Service completed — leave a review above</p>
+          {b.status === "completed" && !b.has_reviewed && (
+            <button onClick={onReview}
+              className="w-full h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 tap-scale mt-2"
+              style={{ background: "hsl(var(--primary))", boxShadow: "var(--shadow-raised)", color: "hsl(var(--primary-foreground))" }}>
+              <Star className="w-4 h-4 fill-current" />
+              Leave a Review
+            </button>
+          )}
+          {b.status === "completed" && b.has_reviewed && (
+            <div className="flex items-center justify-center gap-2 py-2 mt-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <p className="text-sm font-semibold text-green-600">You have reviewed this booking</p>
             </div>
           )}
           {["cancelled", "rejected"].includes(b.status) && (
@@ -325,7 +334,8 @@ const BookingsPage = () => {
         *,
         provider_profile:profiles!bookings_provider_id_fkey(
           full_name, business_name, avatar_url, phone, city
-        )
+        ),
+        reviews(id)
       `)
       .eq("customer_id", pid)
       .order("booking_date", { ascending: false })
@@ -337,6 +347,7 @@ const BookingsPage = () => {
       provider_phone:  b.provider_profile?.phone,
       provider_avatar: b.provider_profile?.avatar_url,
       provider_city:   b.provider_profile?.city,
+      has_reviewed:    Array.isArray(b.reviews) && b.reviews.length > 0,
     }));
     setBookings(enriched);
     setLoading(false);
@@ -461,11 +472,14 @@ const BookingsPage = () => {
         <RatingPromptModal
           booking={ratingBooking}
           onClose={() => setRatingBooking(null)}
-          onRated={async () => { await awardPoints("review_submitted", ratingBooking?.id); }}
+          onRated={async () => {
+            await awardPoints("review_submitted", ratingBooking?.id);
+            setBookings(prev => prev.map(b => b.id === ratingBooking?.id ? { ...b, has_reviewed: true } : b));
+          }}
         />
       )}
       {selected && (
-        <BookingSheet b={selected} onClose={() => setSelected(null)} onCancel={handleCancel} onReschedule={handleReschedule} cancelling={cancelling} rescheduling={rescheduling} />
+        <BookingSheet b={selected} onClose={() => setSelected(null)} onCancel={handleCancel} onReschedule={handleReschedule} cancelling={cancelling} rescheduling={rescheduling} onReview={() => setRatingBooking(selected)} />
       )}
 
       {/* Header */}
