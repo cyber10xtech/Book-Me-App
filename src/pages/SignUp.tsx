@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Eye, EyeOff, CheckCircle, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import PhoneInput from "@/components/PhoneInput";
+import { PhoneInput, isValidNigerianPhone } from "@/components/PhoneInput";
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -19,6 +19,10 @@ const SignUp = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (phone && !isValidNigerianPhone(phone)) {
+      toast.error("Enter a valid 11-digit Nigerian phone number.");
+      return;
+    }
     if (password.length < 6) { toast.error("Password must be at least 6 characters."); return; }
     
     const cleanUsername = username.trim();

@@ -13,7 +13,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, Share2, Heart, Star, MapPin, Plus, Clock,
+  ChevronLeft, Share, Heart, Star, MapPin, Plus, Clock,
   CheckCircle, Camera, Loader2, X, MessageSquare, Lock,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
@@ -814,8 +814,9 @@ const ProviderProfilePage = () => {
         <div className="absolute top-12 right-4 flex gap-2">
           <button onClick={handleShare}
             className="w-11 h-11 rounded-2xl flex items-center justify-center tap-scale"
+            aria-label="Share provider profile"
             style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}>
-            <Share2 className="w-4 h-4 text-white" />
+            <Share className="w-4 h-4 text-white" />
           </button>
           <button onClick={() => requireAuth(toggleFav, "save providers")} disabled={favLoading}
             className="w-11 h-11 rounded-2xl flex items-center justify-center tap-scale"
@@ -866,7 +867,7 @@ const ProviderProfilePage = () => {
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-muted-foreground">
             <MapPin className="w-3.5 h-3.5" />
-            <span className="text-sm">{readableProviderLocation || "Lagos, Nigeria"}</span>
+            <span className="text-sm">{readableProviderLocation || "Location unavailable"}</span>
           </div>
 
           {/* Stats */}

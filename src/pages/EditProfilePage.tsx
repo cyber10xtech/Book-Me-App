@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import StateLgaSelector from "@/components/common/StateLgaSelector";
-import PhoneInput from "@/components/PhoneInput";
+import { PhoneInput, isValidNigerianPhone } from "@/components/PhoneInput";
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -73,6 +73,11 @@ const EditProfilePage = () => {
 
   const handleSave = async () => {
     if (!user) return;
+
+    if (phone && !isValidNigerianPhone(phone)) {
+      toast.error("Enter a valid 11-digit Nigerian phone number.");
+      return;
+    }
 
     const cleanUsername = username.trim();
     if (cleanUsername) {
