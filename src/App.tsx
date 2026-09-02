@@ -17,6 +17,7 @@ import { setupDeepLinkHandler, addPushNotificationListeners } from "@/services/c
 import { useDeepLinkRouter } from "@/hooks/useDeepLinkRouter";
 import { useDeferredDeepLink } from "@/hooks/useDeferredDeepLink";
 import { UpdateDialog } from "@/components/UpdateDialog";
+import DeactivatedScreen from "@/components/DeactivatedScreen";
 
 
 import SignIn from "./pages/SignIn";
@@ -113,25 +114,28 @@ const AppContent = () => {
     clearScrollLock();
   }, [location.pathname]);
 
-  // Profile referral gate state
+  // Profile state & referral gate
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [needsReferral, setNeedsReferral] = useState(false);
+  const [isDeactivated, setIsDeactivated] = useState(false);
 
-  // Fetch profile once after auth resolves to check referral_source
+  // Fetch profile once after auth resolves to check referral_source and is_active
   useEffect(() => {
     if (loading) return;
     if (!user) {
       setProfileLoaded(false);
       setNeedsReferral(false);
+      setIsDeactivated(false);
       return;
     }
 
     supabase
       .from("profiles")
-      .select("referral_source")
+      .select("referral_source, is_active")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
+        setIsDeactivated(data?.is_active === false);
         setNeedsReferral(!data?.referral_source);
         setProfileLoaded(true);
       });
@@ -171,6 +175,10 @@ const AppContent = () => {
       return () => clearTimeout(t);
     }
   }, [user, shouldShowModal]);
+
+  if (user && isDeactivated) {
+    return <DeactivatedScreen onSignOut={() => { setIsDeactivated(false); navigate("/signin"); }} />;
+  }
 
   return (
     <>

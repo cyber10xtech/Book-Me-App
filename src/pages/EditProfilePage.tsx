@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import StateLgaSelector from "@/components/common/StateLgaSelector";
+import PhoneInput from "@/components/PhoneInput";
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -72,17 +73,36 @@ const EditProfilePage = () => {
 
   const handleSave = async () => {
     if (!user) return;
+
+    const cleanUsername = username.trim();
+    if (cleanUsername) {
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("username", cleanUsername)
+        .neq("user_id", user.id)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        toast.error("That username is already taken.");
+        return;
+      }
+    }
+
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
       full_name: fullName,
-      username,
+      username: cleanUsername,
       phone,
       state,
       city,
     }).eq("user_id", user.id);
 
     if (error) {
-      toast.error("Failed to save profile");
+      if (error.message.includes("23505") || error.message.toLowerCase().includes("username")) {
+        toast.error("That username is already taken.");
+      } else {
+        toast.error("Failed to save profile: " + error.message);
+      }
     } else {
       toast.success("Profile updated!");
       navigate(-1);
@@ -136,22 +156,35 @@ const EditProfilePage = () => {
           </div>
 
           <div className="space-y-4">
-            {[
-              { label: "Full Name", value: fullName, set: setFullName, placeholder: "Your full name" },
-              { label: "Username", value: username, set: setUsername, placeholder: "@username" },
-              { label: "Phone Number", value: phone, set: setPhone, placeholder: "+234..." },
-            ].map(f => (
-              <div key={f.label}>
-                <label className="text-xs font-bold text-primary uppercase tracking-wide mb-1 block">{f.label}</label>
-                <input
-                  type="text"
-                  value={f.value}
-                  onChange={e => f.set(e.target.value)}
-                  placeholder={f.placeholder}
-                  className="w-full px-4 py-3 rounded-2xl bg-muted text-foreground text-sm outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-            ))}
+            <div>
+              <label className="text-xs font-bold text-primary uppercase tracking-wide mb-1 block">Full Name</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                placeholder="Your full name"
+                className="w-full px-4 py-3 rounded-2xl bg-muted text-foreground text-sm outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-primary uppercase tracking-wide mb-1 block">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="@username"
+                className="w-full px-4 py-3 rounded-2xl bg-muted text-foreground text-sm outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-primary uppercase tracking-wide mb-1 block">Phone Number</label>
+              <PhoneInput
+                value={phone}
+                onChange={setPhone}
+              />
+            </div>
 
             <StateLgaSelector
               stateValue={state}

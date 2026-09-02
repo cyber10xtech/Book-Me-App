@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Eye, EyeOff, CheckCircle, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import logoImg from "@/assets/bookme-logo.jpg";
+import PhoneInput from "@/components/PhoneInput";
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -20,20 +20,37 @@ const SignUp = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) { toast.error("Password must be at least 6 characters."); return; }
+    
+    const cleanUsername = username.trim();
+    if (cleanUsername) {
+      // Frontend uniqueness pre-check
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("username", cleanUsername)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        toast.error("That username is already taken.");
+        return;
+      }
+    }
+
     setLoading(true);
 
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, username, phone },
+        data: { full_name: fullName, username: cleanUsername, phone },
         emailRedirectTo: `${window.location.origin}/home`,
       },
     });
 
     setLoading(false);
     if (error) {
-      if (error.message.includes("already registered")) {
+      if (error.message.toLowerCase().includes("username") || error.message.includes("23505")) {
+        toast.error("That username is already taken.");
+      } else if (error.message.includes("already registered")) {
         toast.error("This email is already in use. Try signing in instead.");
       } else {
         toast.error(error.message);
@@ -119,25 +136,50 @@ const SignUp = () => {
       </div>
 
       <form onSubmit={handleSignUp} className="space-y-4 flex-1">
-        {[
-          { label: "Full Name",     value: fullName,  setter: setFullName,  placeholder: "John Doe",          type: "text" },
-          { label: "Username",      value: username,  setter: setUsername,  placeholder: "johndoe123",        type: "text" },
-          { label: "Email",         value: email,     setter: setEmail,     placeholder: "you@example.com",   type: "email" },
-          { label: "Phone Number",  value: phone,     setter: setPhone,     placeholder: "+234 800 000 0000", type: "tel" },
-        ].map((f) => (
-          <div key={f.label}>
-            <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2 block">{f.label}</label>
-            <input
-              type={f.type}
-              inputMode={f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"}
-              placeholder={f.placeholder}
-              value={f.value}
-              onChange={e => f.setter(e.target.value)}
-              style={neuInput}
-              required
-            />
-          </div>
-        ))}
+        <div>
+          <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2 block">Full Name</label>
+          <input
+            type="text"
+            placeholder="John Doe"
+            value={fullName}
+            onChange={e => setFullName(e.target.value)}
+            style={neuInput}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2 block">Username</label>
+          <input
+            type="text"
+            placeholder="johndoe123"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            style={neuInput}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2 block">Email</label>
+          <input
+            type="email"
+            inputMode="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            style={neuInput}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2 block">Phone Number</label>
+          <PhoneInput
+            value={phone}
+            onChange={setPhone}
+          />
+        </div>
 
         {/* Password */}
         <div>
