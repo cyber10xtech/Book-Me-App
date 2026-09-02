@@ -12,12 +12,14 @@ export type Json =
   | Json[];
 
 // Enums
-export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rescheduled' | 'accepted' | 'rejected';
 export type DeliveryMode = 'at_shop' | 'at_home';
 export type UserRole = 'customer' | 'provider';
 export type NotificationType =
   | 'booking_confirmed'
   | 'booking_completed'
+  | 'booking_cancelled'
+  | 'booking_rescheduled'
   | 'new_message'
   | 'review_received'
   | 'promotion';

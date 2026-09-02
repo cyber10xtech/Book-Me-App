@@ -17,6 +17,7 @@ type Tab = "upcoming" | "past";
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; stripColor: string; badgeText: string }> = {
   pending:   { label: "Pending",   color: "hsl(38 92% 38%)",   bg: "hsl(38 100% 95%)",  stripColor: "#f59e0b", badgeText: "Awaiting confirmation"  },
   confirmed: { label: "Confirmed", color: "hsl(142 71% 28%)",  bg: "hsl(142 60% 93%)", stripColor: "#22c55e", badgeText: "Confirmed by provider"   },
+  rescheduled: { label: "Rescheduled", color: "hsl(38 92% 38%)", bg: "hsl(38 100% 95%)", stripColor: "#f59e0b", badgeText: "Booking time changed" },
   accepted:  { label: "Confirmed", color: "hsl(142 71% 28%)",  bg: "hsl(142 60% 93%)", stripColor: "#22c55e", badgeText: "Confirmed by provider"   },
   completed: { label: "Completed", color: "hsl(220 80% 35%)",  bg: "hsl(220 80% 94%)", stripColor: "#3b82f6", badgeText: "Service completed"        },
   cancelled: { label: "Cancelled", color: "hsl(0 84% 45%)",    bg: "hsl(0 60% 94%)",   stripColor: "#ef4444", badgeText: "Booking cancelled"        },
@@ -27,13 +28,20 @@ const fmt = (n: number) => `₦${Number(n || 0).toLocaleString()}`;
 const fmtDate = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("en-NG", { weekday: "long", month: "short", day: "numeric" });
 
-const BookingSheet = ({ b, onClose, onCancel, cancelling }: {
+const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, rescheduling }: {
   b: any; onClose: () => void;
-  onCancel: (id: string) => Promise<void>; cancelling: boolean;
+  onCancel: (id: string, reason: string) => Promise<void>; cancelling: boolean;
+  onReschedule: (id: string, date: string, time: string, note: string) => Promise<void>; rescheduling: boolean;
 }) => {
   const cfg = STATUS_CFG[b.status] ?? STATUS_CFG.pending;
-  const canCancel = ["pending", "confirmed", "accepted"].includes(b.status);
+  const canCancel = ["pending", "confirmed", "accepted", "rescheduled"].includes(b.status);
+  const canReschedule = ["pending", "confirmed", "accepted", "rescheduled"].includes(b.status);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [newDate, setNewDate] = useState(b.booking_date || "");
+  const [newTime, setNewTime] = useState(String(b.booking_time || "").slice(0, 5));
+  const [rescheduleNote, setRescheduleNote] = useState("");
   const { user } = useAuth();
 
   // Message Provider — opens this booking's dedicated conversation thread,
@@ -210,20 +218,50 @@ const BookingSheet = ({ b, onClose, onCancel, cancelling }: {
               <XCircle className="w-5 h-5" /> Cancel Booking
             </button>
           )}
+          {canReschedule && !showConfirm && !showReschedule && (
+            <button onClick={() => setShowReschedule(true)}
+              className="w-full h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 tap-scale"
+              style={{ background: "hsl(var(--background))", boxShadow: "var(--shadow-raised)", color: "hsl(var(--primary))" }}>
+              <CalendarDays className="w-4 h-4" /> Reschedule Booking
+            </button>
+          )}
+          {canReschedule && showReschedule && (
+            <div className="space-y-3 rounded-2xl p-3" style={{ background: "hsl(var(--muted))" }}>
+              <p className="text-xs font-extrabold text-foreground">Choose a new date and time</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="date" min={new Date().toISOString().split("T")[0]} value={newDate} onChange={e => setNewDate(e.target.value)} className="h-11 rounded-xl bg-background px-3 text-sm" />
+                <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} className="h-11 rounded-xl bg-background px-3 text-sm" />
+              </div>
+              <textarea value={rescheduleNote} onChange={e => setRescheduleNote(e.target.value)} placeholder="Why are you rescheduling? (Required)" rows={2} className="w-full rounded-xl bg-background p-3 text-sm resize-none outline-none focus:ring-2 focus:ring-primary" />
+              <div className="flex gap-2">
+                <button onClick={() => setShowReschedule(false)} className="flex-1 h-11 rounded-xl text-sm font-bold" style={{ boxShadow: "var(--shadow-raised)" }}>Keep Date</button>
+                <button onClick={() => onReschedule(b.id, newDate, newTime, rescheduleNote)} disabled={rescheduling || !newDate || !newTime || !rescheduleNote.trim()} className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold disabled:opacity-60">{rescheduling ? "Checking…" : "Confirm"}</button>
+              </div>
+            </div>
+          )}
           {canCancel && showConfirm && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-start gap-2 rounded-2xl p-3"
                 style={{ background: "hsl(0 60% 97%)", border: "1px solid hsl(0 84% 80%)" }}>
                 <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-red-700">Are you sure? This cannot be undone. The provider will be notified.</p>
               </div>
+              <textarea
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                placeholder="Why are you cancelling? (Required)"
+                className="w-full rounded-2xl bg-muted p-3 text-sm resize-none outline-none focus:ring-2 focus:ring-primary"
+                rows={3}
+              />
               <div className="flex gap-2">
-                <button onClick={() => setShowConfirm(false)}
+                <button onClick={() => { setShowConfirm(false); setCancelReason(""); }}
                   className="flex-1 h-11 rounded-2xl text-sm font-bold tap-scale"
                   style={{ background: "hsl(var(--background))", boxShadow: "var(--shadow-raised)", color: "hsl(var(--foreground))" }}>
                   Keep Booking
                 </button>
-                <button onClick={() => onCancel(b.id)} disabled={cancelling}
+                <button 
+                  onClick={() => onCancel(b.id, cancelReason)} 
+                  disabled={cancelling || !cancelReason.trim()}
                   className="flex-1 h-11 rounded-2xl text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 tap-scale"
                   style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", boxShadow: "3px 3px 10px rgba(239,68,68,0.35)" }}>
                   {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
@@ -265,6 +303,7 @@ const BookingsPage = () => {
   const [loading, setLoading]     = useState(true);
   const [selected, setSelected]   = useState<any | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [ratingBooking, setRatingBooking] = useState<any | null>(null);
   const promptedRef = useRef<Set<string>>(new Set());
@@ -342,18 +381,67 @@ const BookingsPage = () => {
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); };
   }, [user]);
 
-  const handleCancel = async (id: string) => {
+  const handleCancel = async (id: string, reason: string) => {
     if (!profileId) return;
     setCancelling(true);
-    const { error } = await supabase.from("bookings")
-      .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancelled_by_role: "customer" } as any)
-      .eq("id", id).eq("customer_id", profileId);
-    if (error) toast.error("Could not cancel: " + error.message);
-    else { toast.success("Booking cancelled."); setSelected(null); await fetchBookings(profileId); }
+    const { data: updated, error } = await supabase.from("bookings")
+      .update({ 
+        status: "cancelled", 
+        cancelled_at: new Date().toISOString(), 
+        cancelled_by_role: "customer",
+        cancellation_reason: reason
+      } as any)
+      .eq("id", id).eq("customer_id", profileId)
+      .in("status", ["pending", "confirmed", "accepted", "rescheduled"])
+      .select("id");
+    
+    if (error) {
+      toast.error("Could not cancel: " + error.message);
+    } else if (!updated?.length) {
+      toast.error("This booking was already updated.");
+    } else {
+      toast.success("Booking cancelled.");
+      const booking = bookings.find(b => b.id === id);
+      if (booking?.business_user_id) {
+        await supabase.from("notifications").insert({
+          user_id: booking.business_user_id,
+          title: "Booking Cancelled",
+          body: `Booking #${id.slice(0,8).toUpperCase()} was cancelled. Reason: ${reason}`,
+          type: "booking_cancelled",
+          related_booking_id: id,
+          data: { booking_id: id, type: "booking_cancelled" },
+          is_read: false,
+        } as any);
+      }
+      setSelected(null);
+      await fetchBookings(profileId);
+    }
     setCancelling(false);
   };
 
-  const upcoming = bookings.filter(b => ["pending","confirmed","accepted"].includes(b.status));
+  const handleReschedule = async (id: string, date: string, time: string, note: string) => {
+    if (!profileId || !date || !time || !note.trim()) return;
+    setRescheduling(true);
+    const { data: conflict } = await supabase.from("bookings").select("id")
+      .eq("provider_id", bookings.find(b => b.id === id)?.provider_id)
+      .eq("booking_date", date).eq("booking_time", time)
+      .not("status", "in", "(cancelled,rejected)").neq("id", id).limit(1);
+    if (conflict?.length) { toast.error("That time is no longer available."); setRescheduling(false); return; }
+    const current = bookings.find(b => b.id === id);
+    const notes = [current?.notes, `Reschedule note: ${note.trim()}`].filter(Boolean).join("\n");
+    const { data: updated, error } = await supabase.from("bookings").update({
+      booking_date: date, booking_time: time, booking_time_text: time,
+      notes, status: "rescheduled", updated_at: new Date().toISOString(),
+    } as any).eq("id", id).eq("customer_id", profileId)
+      .in("status", ["pending", "confirmed", "accepted", "rescheduled"]).select("id");
+    if (error || !updated?.length) { toast.error(error?.message || "This booking was already updated."); setRescheduling(false); return; }
+    if (current?.business_user_id) await supabase.from("notifications").insert({
+      user_id: current.business_user_id, title: "Booking Rescheduled", body: `Booking #${id.slice(0, 8).toUpperCase()} moved to ${date} at ${time}. Reason: ${note.trim()}.`, type: "booking_rescheduled", related_booking_id: id, data: { booking_id: id, type: "booking_rescheduled" }, is_read: false,
+    } as any);
+    toast.success("Booking rescheduled."); setSelected(null); await fetchBookings(profileId); setRescheduling(false);
+  };
+
+  const upcoming = bookings.filter(b => ["pending","confirmed","accepted","rescheduled"].includes(b.status));
   const past     = bookings.filter(b => ["completed","cancelled","rejected"].includes(b.status));
   const shown    = tab === "upcoming" ? upcoming : past;
 
@@ -371,7 +459,7 @@ const BookingsPage = () => {
         />
       )}
       {selected && (
-        <BookingSheet b={selected} onClose={() => setSelected(null)} onCancel={handleCancel} cancelling={cancelling} />
+        <BookingSheet b={selected} onClose={() => setSelected(null)} onCancel={handleCancel} onReschedule={handleReschedule} cancelling={cancelling} rescheduling={rescheduling} />
       )}
 
       {/* Header */}

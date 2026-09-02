@@ -292,11 +292,11 @@ const HomePage = () => {
         <div className="adaptive-chip-grid hide-scrollbar pb-2">
           {CATEGORIES.map(cat => (
             <button key={cat.id} onClick={() => navigate(`/search?category=${cat.slug}`)}
-              className="flex flex-col items-center gap-2 flex-shrink-0 tap-scale">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden" style={{ boxShadow: "var(--shadow-raised)" }}>
+              className="category-card flex flex-col items-center gap-2 flex-shrink-0 tap-scale snap-start">
+              <div className="category-card-image rounded-2xl overflow-hidden" style={{ boxShadow: "var(--shadow-raised)" }}>
                 <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
               </div>
-              <span className="text-[10px] font-bold text-foreground text-center w-14 leading-tight">{cat.name}</span>
+              <span className="category-card-label text-[10px] font-bold text-foreground text-center leading-tight">{cat.name}</span>
             </button>
           ))}
         </div>

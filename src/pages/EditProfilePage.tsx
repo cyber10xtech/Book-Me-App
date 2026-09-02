@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import StateLgaSelector from "@/components/common/StateLgaSelector";
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const EditProfilePage = () => {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
+  const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -24,6 +26,7 @@ const EditProfilePage = () => {
           setFullName(data.full_name || "");
           setUsername(data.username || "");
           setPhone(data.phone || "");
+          setState(data.state || "");
           setCity(data.city || "");
           setAvatarUrl(data.avatar_url || null);
         }
@@ -74,6 +77,7 @@ const EditProfilePage = () => {
       full_name: fullName,
       username,
       phone,
+      state,
       city,
     }).eq("user_id", user.id);
 
@@ -136,7 +140,6 @@ const EditProfilePage = () => {
               { label: "Full Name", value: fullName, set: setFullName, placeholder: "Your full name" },
               { label: "Username", value: username, set: setUsername, placeholder: "@username" },
               { label: "Phone Number", value: phone, set: setPhone, placeholder: "+234..." },
-              { label: "City", value: city, set: setCity, placeholder: "Lagos, Abuja..." },
             ].map(f => (
               <div key={f.label}>
                 <label className="text-xs font-bold text-primary uppercase tracking-wide mb-1 block">{f.label}</label>
@@ -149,6 +152,15 @@ const EditProfilePage = () => {
                 />
               </div>
             ))}
+
+            <StateLgaSelector
+              stateValue={state}
+              lgaValue={city}
+              onStateChange={setState}
+              onLgaChange={setCity}
+              stateLabel="State"
+              lgaLabel="City / LGA"
+            />
           </div>
 
           <button

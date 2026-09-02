@@ -4,8 +4,9 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import { useProviders } from "@/hooks/useProviders";
 import { categories as CATEGORIES } from "@/lib/categories";
+import StateLgaSelector from "@/components/common/StateLgaSelector";
 
-type SortKey = "rating" | "reviews" | "newest";
+type SortKey = "rating" | "reviews" | "newest" | "random";
 
 const defaultCover = "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=400&q=60";
 
@@ -18,9 +19,12 @@ const SearchPage = () => {
   const [query, setQuery]             = useState("");
   const [debouncedQ, setDebouncedQ]   = useState("");
   const [selectedCat, setSelectedCat] = useState(initialCat);
+  const [filterState, setFilterState] = useState("");
+  const [filterLga, setFilterLga]     = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy]           = useState<SortKey>("rating");
+  const [sortBy, setSortBy]           = useState<SortKey>("random");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [minRating, setMinRating]       = useState(0);
 
   const { providers, loading } = useProviders();
 
@@ -41,14 +45,24 @@ const SearchPage = () => {
       const nameMatch     = (p.business_name || p.full_name || "").toLowerCase().includes(q);
       const categoryMatch = (p.category || "").toLowerCase().includes(q);
       const cityMatch     = (p.city || "").toLowerCase().includes(q);
-      const matchesQuery  = !q || nameMatch || categoryMatch || cityMatch;
+      const stateMatch    = (p.state || "").toLowerCase().includes(q);
+      const matchesQuery  = !q || nameMatch || categoryMatch || cityMatch || stateMatch;
       const matchesCat    = !selectedCat || norm(p.category) === selectedCat;
       const matchesVerif  = !verifiedOnly || p.is_verified;
-      return matchesQuery && matchesCat && matchesVerif;
+      const matchesState  = !filterState || (p.state || "").toLowerCase().includes(filterState.toLowerCase());
+      const matchesLga    = !filterLga || (p.city || "").toLowerCase().includes(filterLga.toLowerCase());
+      const matchesMinRating = (p.average_rating || 0) >= minRating;
+      return matchesQuery && matchesCat && matchesVerif && matchesState && matchesLga && matchesMinRating;
     })
     .sort((a, b) => {
       if (sortBy === "rating")  return (b.average_rating || 0) - (a.average_rating || 0);
       if (sortBy === "reviews") return (b.review_count   || 0) - (a.review_count   || 0);
+      if (sortBy === "random") {
+        // Pseudo-random sort based on id to prevent re-rendering shuffling
+        const hashA = a.id.charCodeAt(0) + a.id.charCodeAt(a.id.length - 1);
+        const hashB = b.id.charCodeAt(0) + b.id.charCodeAt(b.id.length - 1);
+        return (hashA % 10) - (hashB % 10);
+      }
       return 0; // newest — DB already ordered
     });
 
@@ -99,10 +113,10 @@ const SearchPage = () => {
           <div className="rounded-3xl p-4 mb-3 animate-fade-in"
             style={{ background: "hsl(var(--background))", boxShadow: "var(--shadow-raised)" }}>
             <p className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-3">Sort By</p>
-            <div className="flex gap-2 mb-4">
-              {([["rating","Top Rated"],["reviews","Most Reviews"],["newest","Newest"]] as [SortKey,string][]).map(([key, label]) => (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {([["random","Random"], ["rating","Top Rated"],["reviews","Most Reviews"],["newest","Newest"]] as [SortKey,string][]).map(([key, label]) => (
                 <button key={key} onClick={() => setSortBy(key)}
-                  className="flex-1 py-2 rounded-2xl text-xs font-bold tap-scale"
+                  className="flex-1 min-w-[70px] py-2 rounded-2xl text-xs font-bold tap-scale"
                   style={sortBy === key ? {
                     background: "linear-gradient(145deg, hsl(199 100% 50%), hsl(199 100% 38%))",
                     color: "white", boxShadow: "var(--shadow-sky)",
@@ -112,12 +126,48 @@ const SearchPage = () => {
               ))}
             </div>
             <button onClick={() => setVerifiedOnly(v => !v)}
-              className="w-full py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 tap-scale"
+              className="w-full py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 tap-scale mb-4"
               style={verifiedOnly ? {
                 background: "hsl(142 40% 94%)", color: "hsl(142 71% 28%)", border: "1.5px solid hsl(142 71% 70%)"
               } : { background: "hsl(var(--background))", boxShadow: "var(--shadow-flat)", color: "hsl(var(--muted-foreground))" }}>
               <CheckCircle className="w-4 h-4" /> Verified Providers Only
             </button>
+
+            <div className="border-t border-border pt-3 mb-4">
+              <p className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2">Minimum Rating</p>
+              <div className="flex gap-2">
+                {[0, 3, 4, 4.5].map((val) => (
+                  <button key={val} onClick={() => setMinRating(val)}
+                    className="flex-1 py-2 rounded-2xl text-xs font-bold tap-scale flex items-center justify-center gap-1"
+                    style={minRating === val ? {
+                      background: "hsl(38 92% 50%)",
+                      color: "white", boxShadow: "var(--shadow-raised)",
+                    } : { background: "hsl(var(--background))", boxShadow: "var(--shadow-flat)", color: "hsl(var(--muted-foreground))" }}>
+                    {val === 0 ? "Any" : <>{val}+ <Star className="w-3 h-3 fill-current" /></>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-3">
+              <p className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2">Location Filter</p>
+              <StateLgaSelector
+                stateValue={filterState}
+                lgaValue={filterLga}
+                onStateChange={setFilterState}
+                onLgaChange={setFilterLga}
+                stateLabel="Filter by State"
+                lgaLabel="Filter by City / LGA"
+              />
+              {(filterState || filterLga) && (
+                <button
+                  onClick={() => { setFilterState(""); setFilterLga(""); }}
+                  className="mt-2 text-xs font-bold text-primary underline"
+                >
+                  Clear location filter
+                </button>
+              )}
+            </div>
           </div>
         )}
 

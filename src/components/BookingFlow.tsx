@@ -12,6 +12,7 @@ import { useCustomerPoints } from "@/hooks/useCustomerPoints";
 import ChatWindow from "@/components/ChatWindow";
 import { canMessageBooking } from "@/lib/messagingWindow";
 import HomeServiceNoticeModal from "@/components/HomeServiceNoticeModal";
+import StateLgaSelector from "@/components/common/StateLgaSelector";
 
 interface BookingFlowProps {
   providerId: string;
@@ -214,6 +215,8 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
   const [selDate, setSelDate]       = useState<string | null>(null);
   const [selTime, setSelTime]       = useState<string | null>(null);
   const [mode, setMode]             = useState<"at_shop" | "at_home">("at_shop");
+  const [state, setState]           = useState("");
+  const [city, setCity]             = useState("");
   const [address, setAddress]       = useState("");
   const [locCoords, setLocCoords]   = useState("");
   const [locating, setLocating]     = useState(false);
@@ -791,10 +794,20 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
 
               {mode === "at_home" && (
                 <div className="space-y-3 animate-fade-in">
+                  <StateLgaSelector
+                    stateValue={state}
+                    lgaValue={city}
+                    onStateChange={setState}
+                    onLgaChange={setCity}
+                    stateLabel="State"
+                    lgaLabel="City / LGA"
+                    required
+                  />
+
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide">
-                        Your Address <span className="text-destructive">*</span>
+                        Street Address <span className="text-destructive">*</span>
                       </label>
                       {address.trim().length >= 5 && (
                         <span className="text-[10px] font-extrabold" style={{ color: "#22c55e" }}>✓ Set</span>
