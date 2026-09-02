@@ -10,6 +10,7 @@ import RatingPromptModal from "@/components/RatingPromptModal";
 import { useCustomerPoints } from "@/hooks/useCustomerPoints";
 import ChatWindow from "@/components/ChatWindow";
 import { canMessageBooking } from "@/lib/messagingWindow";
+import { useReadableLocation } from "@/lib/readableLocation";
 
 type Tab = "upcoming" | "past";
 
@@ -27,6 +28,11 @@ const STATUS_CFG: Record<string, { label: string; color: string; bg: string; str
 const fmt = (n: number) => `₦${Number(n || 0).toLocaleString()}`;
 const fmtDate = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("en-NG", { weekday: "long", month: "short", day: "numeric" });
+
+const ReadableLocation = ({ value }: { value?: string | null }) => {
+  const location = useReadableLocation({ address: value });
+  return <>{location}</>;
+};
 
 const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, rescheduling }: {
   b: any; onClose: () => void;
@@ -180,7 +186,7 @@ const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, reschedu
               <p className="text-[10px] text-muted-foreground uppercase font-extrabold mb-1">Your Location</p>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-                <p className="text-sm">{b.customer_location}</p>
+                <p className="text-sm"><ReadableLocation value={b.customer_location} /></p>
               </div>
             </div>
           )}

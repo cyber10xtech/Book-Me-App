@@ -26,6 +26,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useCustomerPoints } from "@/hooks/useCustomerPoints";
 import { canMessageBooking } from "@/lib/messagingWindow";
+import { useReadableLocation } from "@/lib/readableLocation";
 import { shareProvider } from "@/services/deepLinks";
 import { Capacitor } from "@capacitor/core";
 
@@ -505,6 +506,14 @@ const ProviderProfilePage = () => {
   const [liveCount,       setLiveCount]        = useState<number | null>(null);
 
   const { provider, services, loading } = useProviderDetail(id || "");
+  const providerRecord = provider as any;
+  const readableProviderLocation = useReadableLocation({
+    address: providerRecord?.address,
+    city: providerRecord?.city,
+    state: providerRecord?.state,
+    latitude: providerRecord?.latitude,
+    longitude: providerRecord?.longitude,
+  });
   const { awardPoints } = useCustomerPoints(profileId);
 
   // Time-lock: derive open/closed status from business_hours + is_active
@@ -857,7 +866,7 @@ const ProviderProfilePage = () => {
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-muted-foreground">
             <MapPin className="w-3.5 h-3.5" />
-            <span className="text-sm">{provider.address || provider.city || "Lagos, Nigeria"}</span>
+            <span className="text-sm">{readableProviderLocation || "Lagos, Nigeria"}</span>
           </div>
 
           {/* Stats */}
@@ -1209,7 +1218,7 @@ const ProviderProfilePage = () => {
               { label: "About",   value: provider.bio || provider.business_description },
               { label: "City",    value: provider.city    },
               { label: "State",   value: provider.state   },
-              { label: "Address", value: provider.address },
+              { label: "Address", value: readableProviderLocation || provider.address },
               { label: "Website", value: provider.website },
             ].filter(i => i.value).map(({ label, value }) => (
               <div key={label} className="rounded-3xl p-4"

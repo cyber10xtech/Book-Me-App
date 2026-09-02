@@ -46,20 +46,50 @@ export const useProviders = () => {
         }
       }
 
+      // Prioritize least-booked/0-booked providers.
+      
       // Calculate counts
       const bookingCounts = allBookings.reduce((acc: Record<string, number>, b) => {
         acc[b.provider_id] = (acc[b.provider_id] || 0) + 1;
         return acc;
       }, {});
 
-      // Filter to only include providers with 0 bookings
-      const zeroBookingProviders = fetchedProviders.filter(p => !bookingCounts[p.id]);
+      // Session-stable shuffle weights
+      let shuffleMap: Record<string, number> = {};
+      try {
+        const stored = sessionStorage.getItem("provider_shuffle_map");
+        if (stored) shuffleMap = JSON.parse(stored);
+      } catch (e) {}
 
-      // Randomize array
-      const shuffled = [...zeroBookingProviders].sort(() => Math.random() - 0.5);
-      
+      let mapUpdated = false;
+      fetchedProviders.forEach(p => {
+        if (typeof shuffleMap[p.id] !== "number") {
+          shuffleMap[p.id] = Math.random();
+          mapUpdated = true;
+        }
+      });
+      if (mapUpdated) {
+        sessionStorage.setItem("provider_shuffle_map", JSON.stringify(shuffleMap));
+      }
+
+      // Sort by booking count (ascending) to prioritize least-booked/0-booked.
+      // If booking counts are equal, use the stable shuffle weight to sort randomly.
+      const sorted = [...fetchedProviders].sort((a, b) => {
+        const countA = bookingCounts[a.id] || 0;
+        const countB = bookingCounts[b.id] || 0;
+        
+        if (countA !== countB) {
+           return countA - countB; // lower bookings first
+        }
+        
+        const weightA = shuffleMap[a.id] || 0;
+        const weightB = shuffleMap[b.id] || 0;
+        
+        return weightA - weightB;
+      });
+
       // Ensure no duplicate providers
-      const uniqueProviders = Array.from(new Map(shuffled.map(p => [p.id, p])).values());
+      const uniqueProviders = Array.from(new Map(sorted.map(p => [p.id, p])).values());
 
       setProviders(uniqueProviders);
     } catch (err: any) {

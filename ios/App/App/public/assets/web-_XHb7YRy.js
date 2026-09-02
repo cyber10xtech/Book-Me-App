@@ -1,1 +1,0 @@
-import{W as e}from"./capacitor-vendor-CzIy2rdm.js";class r extends e{async getAttributionToken(){throw this.unimplemented("Not implemented on web.")}async getInstallReferrer(){throw this.unimplemented("Not implemented on web.")}}export{r as InstallReferrerWeb};

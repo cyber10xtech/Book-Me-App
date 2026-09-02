@@ -13,6 +13,7 @@ import ChatWindow from "@/components/ChatWindow";
 import { canMessageBooking } from "@/lib/messagingWindow";
 import HomeServiceNoticeModal from "@/components/HomeServiceNoticeModal";
 import StateLgaSelector from "@/components/common/StateLgaSelector";
+import { parseCoordinates, resolveReadableLocation } from "@/lib/readableLocation";
 
 interface BookingFlowProps {
   providerId: string;
@@ -321,8 +322,11 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
     if (pos) {
       const coords = `${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`;
       setLocCoords(coords);
-      if (!address.trim()) setAddress(coords);
-      toast.success("GPS captured! Edit the address if needed.");
+      if (!address.trim() || parseCoordinates(address)) {
+        const readable = await resolveReadableLocation({ latitude: pos.latitude, longitude: pos.longitude, city, state });
+        setAddress(readable);
+      }
+      toast.success("GPS captured! Check the address before booking.");
     } else {
       toast.error("Could not get GPS. Please type your address.");
     }

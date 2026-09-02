@@ -6,7 +6,7 @@ import { useProviders } from "@/hooks/useProviders";
 import { categories as CATEGORIES } from "@/lib/categories";
 import StateLgaSelector from "@/components/common/StateLgaSelector";
 
-type SortKey = "rating" | "reviews" | "newest" | "random";
+type SortKey = "rating" | "reviews" | "newest";
 
 const defaultCover = "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=400&q=60";
 
@@ -22,9 +22,8 @@ const SearchPage = () => {
   const [filterState, setFilterState] = useState("");
   const [filterLga, setFilterLga]     = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy]           = useState<SortKey>("random");
+  const [sortBy, setSortBy]           = useState<SortKey>("rating");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [minRating, setMinRating]       = useState(0);
 
   const { providers, loading } = useProviders();
 
@@ -51,18 +50,11 @@ const SearchPage = () => {
       const matchesVerif  = !verifiedOnly || p.is_verified;
       const matchesState  = !filterState || (p.state || "").toLowerCase().includes(filterState.toLowerCase());
       const matchesLga    = !filterLga || (p.city || "").toLowerCase().includes(filterLga.toLowerCase());
-      const matchesMinRating = (p.average_rating || 0) >= minRating;
-      return matchesQuery && matchesCat && matchesVerif && matchesState && matchesLga && matchesMinRating;
+      return matchesQuery && matchesCat && matchesVerif && matchesState && matchesLga;
     })
     .sort((a, b) => {
       if (sortBy === "rating")  return (b.average_rating || 0) - (a.average_rating || 0);
       if (sortBy === "reviews") return (b.review_count   || 0) - (a.review_count   || 0);
-      if (sortBy === "random") {
-        // Pseudo-random sort based on id to prevent re-rendering shuffling
-        const hashA = a.id.charCodeAt(0) + a.id.charCodeAt(a.id.length - 1);
-        const hashB = b.id.charCodeAt(0) + b.id.charCodeAt(b.id.length - 1);
-        return (hashA % 10) - (hashB % 10);
-      }
       return 0; // newest — DB already ordered
     });
 
@@ -113,10 +105,10 @@ const SearchPage = () => {
           <div className="rounded-3xl p-4 mb-3 animate-fade-in"
             style={{ background: "hsl(var(--background))", boxShadow: "var(--shadow-raised)" }}>
             <p className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-3">Sort By</p>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {([["random","Random"], ["rating","Top Rated"],["reviews","Most Reviews"],["newest","Newest"]] as [SortKey,string][]).map(([key, label]) => (
+            <div className="flex gap-2 mb-4">
+              {([["rating","Top Rated"],["reviews","Most Reviews"],["newest","Newest"]] as [SortKey,string][]).map(([key, label]) => (
                 <button key={key} onClick={() => setSortBy(key)}
-                  className="flex-1 min-w-[70px] py-2 rounded-2xl text-xs font-bold tap-scale"
+                  className="flex-1 py-2 rounded-2xl text-xs font-bold tap-scale"
                   style={sortBy === key ? {
                     background: "linear-gradient(145deg, hsl(199 100% 50%), hsl(199 100% 38%))",
                     color: "white", boxShadow: "var(--shadow-sky)",
@@ -132,22 +124,6 @@ const SearchPage = () => {
               } : { background: "hsl(var(--background))", boxShadow: "var(--shadow-flat)", color: "hsl(var(--muted-foreground))" }}>
               <CheckCircle className="w-4 h-4" /> Verified Providers Only
             </button>
-
-            <div className="border-t border-border pt-3 mb-4">
-              <p className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2">Minimum Rating</p>
-              <div className="flex gap-2">
-                {[0, 3, 4, 4.5].map((val) => (
-                  <button key={val} onClick={() => setMinRating(val)}
-                    className="flex-1 py-2 rounded-2xl text-xs font-bold tap-scale flex items-center justify-center gap-1"
-                    style={minRating === val ? {
-                      background: "hsl(38 92% 50%)",
-                      color: "white", boxShadow: "var(--shadow-raised)",
-                    } : { background: "hsl(var(--background))", boxShadow: "var(--shadow-flat)", color: "hsl(var(--muted-foreground))" }}>
-                    {val === 0 ? "Any" : <>{val}+ <Star className="w-3 h-3 fill-current" /></>}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <div className="border-t border-border pt-3">
               <p className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide mb-2">Location Filter</p>
