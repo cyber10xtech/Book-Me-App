@@ -71,9 +71,8 @@ export function compareVersions(v1: unknown, v2: unknown): number | null {
  * Always fails open with { status: 'check_failed' } on error or invalid config.
  */
 export async function checkUpdatePolicy(): Promise<UpdateCheckResult> {
-  if (!Capacitor.isNativePlatform()) {
-    return { status: 'up_to_date' };
-  }
+  // Update prompts temporarily paused per user directive
+  return { status: 'up_to_date' };
 
   try {
     const info = await App.getInfo();

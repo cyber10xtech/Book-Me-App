@@ -372,7 +372,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = L4TKDN4H8W;
 				EMBED_ASSET_PACKS_IN_PRODUCT_BUNDLE = NO;
 				INFOPLIST_FILE = App/Info.plist;
@@ -382,7 +382,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.2;
+				MARKETING_VERSION = 1.9.6;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.bookmebusiness.customerapp1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -402,7 +402,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = L4TKDN4H8W;
 				EMBED_ASSET_PACKS_IN_PRODUCT_BUNDLE = NO;
 				INFOPLIST_FILE = App/Info.plist;
@@ -412,7 +412,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.2;
+				MARKETING_VERSION = 1.9.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bookmebusiness.customerapp1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
