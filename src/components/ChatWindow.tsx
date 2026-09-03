@@ -88,9 +88,9 @@ async function notifyOtherUser(
         user_id:            recipientProfileId,
         title,
         message:            body,
-        type:               "message",
+        type:               "new_message",
         related_booking_id: conv.booking_id ?? undefined,
-        data: { conversation_id: conversationId, message_type: "text" },
+        data: { conversation_id: conversationId, message_type: "text", click_action: `/chats?conversation=${conversationId}` },
       },
     });
   } catch (err) {

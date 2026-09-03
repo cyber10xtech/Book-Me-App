@@ -445,6 +445,7 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
           message: `${profile.full_name || "A customer"} booked ${svc.name} on ${selDate} at ${selTime}. Automatically confirmed.`,
           type:    "booking_confirmed",
           related_booking_id: newBooking?.id ?? undefined,
+          data: { click_action: `/calendar?booking=${newBooking?.id}` },
         },
       });
 
@@ -455,6 +456,7 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
           message: `Your booking for ${svc.name} with ${provider.business_name || provider.full_name || "the provider"} on ${selDate} at ${selTime} is confirmed.`,
           type:    "booking_confirmed",
           related_booking_id: newBooking?.id ?? undefined,
+          data: { click_action: `/calendar?booking=${newBooking?.id}` },
         },
       });
 
