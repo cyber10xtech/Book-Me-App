@@ -3,13 +3,14 @@
  *
  * Sends FCM push notifications to ALL registered tokens for a user.
  * Automatically uses both the primary token (fcm_tokens table) and the
- * backup token (profiles.fcm_token), deduplicates, fans out to all,
- * and cleans up any stale/unregistered tokens it finds.
+ * backup token (profiles.fcm_token), deduplicates, maps notification types
+ * to dedicated Android notification channels, fans out to all tokens, and
+ * cleans up stale/unregistered tokens.
  *
  * Deploy:
- *   supabase functions deploy send-notification
+ *   supabase functions deploy send-notification --project-ref trnsuruvwdzfrhfaboxe
  *
- * Required secrets (set in Supabase Dashboard → Edge Functions → Secrets):
+ * Required secrets:
  *   FIREBASE_PROJECT_ID       — your Firebase project ID
  *   FIREBASE_SERVICE_ACCOUNT  — full JSON of the service account key file
  */
@@ -22,6 +23,38 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// ── Android Notification Channel Mapping ──────────────────────────────────────
+
+function getChannelIdForType(type: string): string {
+  switch (type) {
+    case "new_message":
+      return "bookme_chat";
+    case "new_booking":
+    case "booking_created":
+      return "bookme_bookings";
+    case "booking_confirmed":
+    case "booking_completed":
+    case "booking_status_changed":
+    case "booking_updated":
+      return "bookme_booking_updates";
+    case "booking_cancelled":
+      return "bookme_cancellations";
+    case "booking_rescheduled":
+      return "bookme_reschedules";
+    case "booking_reminder":
+    case "reminder":
+      return "bookme_reminders";
+    case "promotion":
+    case "offer":
+      return "bookme_promotions";
+    case "system":
+    case "account":
+      return "bookme_system";
+    default:
+      return "bookme_default";
+  }
+}
 
 // ── Google OAuth2 access token via service account JWT ───────────────────────
 
@@ -105,6 +138,7 @@ async function sendFcmMessage(
   fcmToken:    string,
   title:       string,
   body:        string,
+  channelId:   string,
   data:        Record<string, string>
 ): Promise<FcmResult> {
   const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
@@ -122,8 +156,8 @@ async function sendFcmMessage(
         android: {
           priority: "high",
           notification: {
-            sound:      "default",
-            channel_id: "bookme_default",
+            sound: "default",
+            channel_id: channelId,
           },
         },
         apns: {
@@ -139,7 +173,7 @@ async function sendFcmMessage(
             },
           },
         },
-        data, // all values must be strings — enforced by caller
+        data,
       },
     }),
   });
@@ -161,7 +195,6 @@ async function sendFcmMessage(
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
   }
@@ -169,7 +202,7 @@ serve(async (req) => {
   try {
     const payload = await req.json();
     const {
-      user_id,                    // profiles.id of the recipient
+      user_id,                    // profiles.id OR auth.users.id
       title,
       message      = "",
       type         = "system",
@@ -184,57 +217,75 @@ serve(async (req) => {
       );
     }
 
-    // ── Supabase service client ─────────────────────────────────────────────
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const db          = createClient(supabaseUrl, serviceKey);
 
-    // ── Resolve auth user_id from profiles.id ───────────────────────────────
-    const { data: profile, error: profileErr } = await db
-      .from("profiles")
-      .select("user_id, fcm_token")
-      .eq("id", user_id)
-      .single();
+    // ── Flexible Recipient Resolution (profiles.id OR auth.users.id) ─────────
+    let profile: { id: string; user_id: string; fcm_token: string | null } | null = null;
+    let authUserId = user_id;
 
-    if (profileErr || !profile) {
-      console.warn(`[send-notification] profile not found for id=${user_id}`);
-      return new Response(
-        JSON.stringify({ error: "profile not found", user_id }),
-        { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
+    // 1) Try matching profiles.id first
+    const { data: pById } = await db
+      .from("profiles")
+      .select("id, user_id, fcm_token")
+      .eq("id", user_id)
+      .maybeSingle();
+
+    if (pById) {
+      profile = pById;
+      authUserId = pById.user_id;
+    } else {
+      // 2) Try matching profiles.user_id next
+      const { data: pByUser } = await db
+        .from("profiles")
+        .select("id, user_id, fcm_token")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+      if (pByUser) {
+        profile = pByUser;
+        authUserId = pByUser.user_id;
+      }
     }
 
-    const authUserId = profile.user_id;
-
     // ── Collect ALL FCM tokens for this user ────────────────────────────────
-    // Primary: fcm_tokens table (supports multiple devices)
+    const tokenSet = new Set<string>();
+
+    // Primary: fcm_tokens table
     const { data: tokenRows } = await db
       .from("fcm_tokens")
-      .select("token, platform")
-      .eq("user_id", authUserId);
+      .select("token")
+      .or(`user_id.eq.${authUserId},user_id.eq.${user_id}`);
 
-    const tokenSet = new Set<string>(tokenRows?.map((r) => r.token) ?? []);
+    if (tokenRows) {
+      tokenRows.forEach((r) => { if (r.token) tokenSet.add(r.token); });
+    }
 
-    // Backup: profiles.fcm_token (kept for backward compat)
-    if (profile.fcm_token) tokenSet.add(profile.fcm_token);
+    // Backup: profiles.fcm_token
+    if (profile?.fcm_token) {
+      tokenSet.add(profile.fcm_token);
+    }
 
     if (tokenSet.size === 0) {
-      console.log(`[send-notification] no tokens for user=${user_id} — skipping push`);
+      console.log(`[send-notification] no tokens found for user_id=${user_id} (authUserId=${authUserId}) — skipping push`);
       return new Response(
         JSON.stringify({ sent: 0, message: "no FCM tokens registered for this user" }),
         { headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
 
-    // ── Firebase access token ───────────────────────────────────────────────
+    // ── Firebase access token & channel resolution ─────────────────────────
     const projectId         = Deno.env.get("FIREBASE_PROJECT_ID")!;
     const serviceAccountRaw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT")!;
     const serviceAccount    = JSON.parse(serviceAccountRaw);
     const accessToken       = await getAccessToken(serviceAccount);
+    const channelId         = getChannelIdForType(type);
 
     // ── Build FCM data payload (all values must be strings) ─────────────────
     const fcmData: Record<string, string> = {
       type,
+      channel_id: channelId,
       click_action: related_booking_id
         ? `/calendar?booking=${related_booking_id}`
         : "/notifications",
@@ -247,7 +298,7 @@ serve(async (req) => {
     // ── Fan out to ALL tokens in parallel ───────────────────────────────────
     const results = await Promise.all(
       Array.from(tokenSet).map((token) =>
-        sendFcmMessage(projectId, accessToken, token, title, message, fcmData)
+        sendFcmMessage(projectId, accessToken, token, title, message, channelId, fcmData)
       )
     );
 
@@ -259,16 +310,15 @@ serve(async (req) => {
     if (staleTokens.length > 0) {
       await db.from("fcm_tokens").delete().in("token", staleTokens);
 
-      // Also clear from profiles if the backup token is stale
-      if (profile.fcm_token && staleTokens.includes(profile.fcm_token)) {
-        await db.from("profiles").update({ fcm_token: null }).eq("id", user_id);
+      if (profile?.id && profile.fcm_token && staleTokens.includes(profile.fcm_token)) {
+        await db.from("profiles").update({ fcm_token: null }).eq("id", profile.id);
       }
 
       console.log(`[send-notification] removed ${staleTokens.length} stale token(s)`);
     }
 
     console.log(
-      `[send-notification] user=${user_id} tokens=${tokenSet.size} ` +
+      `[send-notification] user=${user_id} tokens=${tokenSet.size} channel=${channelId} ` +
       `sent=${succeeded.length} failed=${failed.length} stale_cleaned=${staleTokens.length}`
     );
 
@@ -277,6 +327,7 @@ serve(async (req) => {
         sent:          succeeded.length,
         failed:        failed.length,
         stale_cleaned: staleTokens.length,
+        channel_id:    channelId,
         results,
       }),
       { headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
