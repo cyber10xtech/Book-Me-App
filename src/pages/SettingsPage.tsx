@@ -14,6 +14,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // ── Neumorphic toggle ─────────────────────────────────────────────────────────
 const Toggle = ({
@@ -80,7 +82,7 @@ interface RowBaseProps {
   last?: boolean;
 }
 interface ToggleRowProps extends RowBaseProps { type: "toggle"; value: boolean; onChange: (v: boolean) => void; }
-interface NavRowProps   extends RowBaseProps { type: "nav";    onPress: () => void; badge?: string; }
+interface NavRowProps extends RowBaseProps { type: "nav"; onPress: () => void; badge?: string; }
 
 type RowProps = ToggleRowProps | NavRowProps;
 
@@ -151,12 +153,14 @@ const SettingsPage = () => {
   const { user, signOut } = useAuth();
   const { requireAuth, modal: authModal } = useRequireAuth();
 
-  const [pushEnabled,  setPushEnabled]  = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(true);
-  const [smsEnabled,   setSmsEnabled]   = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [darkMode,     setDarkMode]     = useState(false);
-  const [saving,       setSaving]       = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Load notification preferences from Supabase
   useEffect(() => {
@@ -169,9 +173,9 @@ const SettingsPage = () => {
       .then(({ data }) => {
         if (data?.notification_preferences) {
           const p = data.notification_preferences as any;
-          setPushEnabled(p.push  ?? true);
+          setPushEnabled(p.push ?? true);
           setEmailEnabled(p.email ?? true);
-          setSmsEnabled(p.sms   ?? false);
+          setSmsEnabled(p.sms ?? false);
         }
       });
   }, [user]);
@@ -180,9 +184,9 @@ const SettingsPage = () => {
     if (!user) return;
     setSaving(key);
     const prefs: Record<string, boolean> = {
-      push:  key === "push"  ? val : pushEnabled,
+      push: key === "push" ? val : pushEnabled,
       email: key === "email" ? val : emailEnabled,
-      sms:   key === "sms"   ? val : smsEnabled,
+      sms: key === "sms" ? val : smsEnabled,
     };
     await supabase
       .from("profiles")
@@ -197,8 +201,22 @@ const SettingsPage = () => {
     navigate("/", { replace: true });
   };
 
-  const handleDeleteAccount = () => {
-    toast.error("To delete your account, contact support@bookmebusiness.com");
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-own-account");
+      if (error) {
+        toast.error("Failed to delete account: " + error.message);
+        setDeleting(false);
+        return;
+      }
+      toast.success("Account deleted successfully.");
+      await signOut();
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      toast.error("Account deletion failed: " + (err.message || "Unknown error"));
+      setDeleting(false);
+    }
   };
 
   return (
@@ -309,7 +327,7 @@ const SettingsPage = () => {
               label="Delete Account"
               subtitle="Permanently remove all your data"
               danger
-              onPress={handleDeleteAccount}
+              onPress={() => setDeleteDialog(true)}
               last
             />
           </Section>
@@ -333,6 +351,45 @@ const SettingsPage = () => {
         )}
 
       </div>
+
+      <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <DialogContent className="rounded-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive font-bold text-lg flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              Delete Account?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Are you sure you want to delete your account? This will permanently remove your profile, bookings, saved providers, and associated account data.
+            </p>
+            <p className="text-xs font-semibold text-destructive">
+              This action is permanent and cannot be undone.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDeleteDialog(false)}
+                disabled={deleting}
+                className="flex-1 h-12 rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 h-12 rounded-xl font-bold"
+              >
+                {deleting ? "Deleting..." : "Delete Account"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {authModal}
     </div>
