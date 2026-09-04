@@ -50,11 +50,11 @@ export const useNotificationListener = () => {
             .eq("is_read", false)
         )
       );
-      // If profileId === user.id, only count once
+      // If profileId === user.id or profileId is null, counts array has length 1
       const total =
-        profileId === user.id
-          ? counts[0].count || 0
-          : (counts[0].count || 0) + (counts[1]?.count || 0);
+        ids.length === 1
+          ? counts[0]?.count || 0
+          : (counts[0]?.count || 0) + (counts[1]?.count || 0);
       setUnreadCount(total);
 
       // Subscribe on profile.id

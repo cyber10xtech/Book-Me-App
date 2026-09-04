@@ -4,6 +4,7 @@ import { ChevronLeft, Eye, EyeOff, CheckCircle, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { PhoneInput, isValidNigerianPhone } from "@/components/PhoneInput";
+import logoImg from "@/assets/bookme-logo.jpg";
 
 const SignUp = () => {
   const navigate = useNavigate();
