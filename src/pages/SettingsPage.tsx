@@ -204,17 +204,63 @@ const SettingsPage = () => {
   const handleDeleteAccount = async () => {
     setDeleting(true);
     try {
-      const { error } = await supabase.functions.invoke("delete-own-account");
-      if (error) {
-        toast.error("Failed to delete account: " + error.message);
+      // 1. Ensure we have an active, non-expired auth session before invoking function
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      let activeSession = session;
+      if (!activeSession || sessionError) {
+        // Attempt session refresh if missing or expired
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        activeSession = refreshData?.session ?? null;
+      }
+
+      if (!activeSession) {
+        toast.error("Unable to delete account because your session has expired. Please sign in again.");
         setDeleting(false);
         return;
       }
+
+      // 2. Invoke delete-own-account Edge Function
+      const { error } = await supabase.functions.invoke("delete-own-account");
+
+      if (error) {
+        let userMessage = "Unable to delete account right now. Please try again.";
+        const errObj = error as any;
+
+        // Parse Supabase FunctionsHttpError response context if present
+        if (errObj?.context) {
+          const status = errObj.context.status;
+          console.error("[DeleteAccount] Edge function non-2xx status:", status);
+
+          if (status === 401) {
+            userMessage = "Unable to delete account because your session has expired. Please sign in again.";
+          } else {
+            try {
+              const body = await errObj.context.clone().json();
+              console.error("[DeleteAccount] Edge function error response body:", body);
+            } catch (_) {
+              try {
+                const text = await errObj.context.clone().text();
+                console.error("[DeleteAccount] Edge function error response text:", text);
+              } catch (__) {}
+            }
+          }
+        } else {
+          console.error("[DeleteAccount] Error during function invocation:", error);
+        }
+
+        toast.error(userMessage);
+        setDeleting(false);
+        return;
+      }
+
+      // 3. Success handling
       toast.success("Account deleted successfully.");
       await signOut();
       navigate("/", { replace: true });
     } catch (err: any) {
-      toast.error("Account deletion failed: " + (err.message || "Unknown error"));
+      console.error("[DeleteAccount] Unexpected exception:", err);
+      toast.error("Unable to delete account right now. Please try again.");
       setDeleting(false);
     }
   };
