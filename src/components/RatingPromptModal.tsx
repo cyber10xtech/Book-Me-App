@@ -37,56 +37,58 @@ const RatingPromptModal = ({ booking, onClose, onRated }: RatingPromptModalProps
     }
     setSubmitting(true);
 
-    // 1. Insert review
-    const { error: reviewError } = await supabase.from("reviews").insert({
-      booking_id: booking.id,
-      customer_id: booking.customer_id,
-      provider_id: booking.provider_id,
-      rating,
-      comment: comment.trim() || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    try {
+      // 1. Insert review
+      const { error: reviewError } = await supabase.from("reviews").insert({
+        booking_id: booking.id,
+        customer_id: booking.customer_id,
+        provider_id: booking.provider_id,
+        rating,
+        comment: comment.trim() || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
 
-    if (reviewError) {
-      // Duplicate review (unique constraint on booking_id) — already reviewed
-      if (reviewError.code === "23505") {
-        toast.info("You've already reviewed this booking.");
-        onClose();
+      if (reviewError) {
+        // Duplicate review (unique constraint on booking_id) — already reviewed
+        if (reviewError.code === "23505") {
+          toast.info("You've already reviewed this booking.");
+          onClose();
+          return;
+        }
+        toast.error("Could not submit review. Please try again.");
         return;
       }
-      toast.error("Could not submit review. Please try again.");
+
+      // 2. Insert review_received notification for the provider
+      // Using provider's profile_id as user_id (matches existing notification pattern)
+      await supabase.from("notifications").insert({
+        user_id: booking.provider_id,
+        type: "review_received",
+        title: "New Review! 🌟",
+        body: `A customer rated your service "${booking.service_name}" ${rating} star${rating > 1 ? "s" : ""}${comment.trim() ? `: "${comment.trim().slice(0, 80)}"` : "."}`,
+        related_booking_id: booking.id,
+        related_provider_id: booking.provider_id,
+        data: { rating, booking_id: booking.id, service_name: booking.service_name },
+        is_read: false,
+        created_at: new Date().toISOString(),
+      });
+
+      // 3. Update provider average_rating and review_count
+      // Do a safe recalculation via a Supabase RPC if available, otherwise
+      // fall back to a simple increment approach (the trigger handles average)
+      // We leave the DB trigger to handle average_rating recalculation.
+
+      setDone(true);
+
+      // Brief success state then close & award points
+      setTimeout(() => {
+        onRated();
+        onClose();
+      }, 1800);
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    // 2. Insert review_received notification for the provider
-    // Using provider's profile_id as user_id (matches existing notification pattern)
-    await supabase.from("notifications").insert({
-      user_id: booking.provider_id,
-      type: "review_received",
-      title: "New Review! 🌟",
-      body: `A customer rated your service "${booking.service_name}" ${rating} star${rating > 1 ? "s" : ""}${comment.trim() ? `: "${comment.trim().slice(0, 80)}"` : "."}`,
-      related_booking_id: booking.id,
-      related_provider_id: booking.provider_id,
-      data: { rating, booking_id: booking.id, service_name: booking.service_name },
-      is_read: false,
-      created_at: new Date().toISOString(),
-    });
-
-    // 3. Update provider average_rating and review_count
-    // Do a safe recalculation via a Supabase RPC if available, otherwise
-    // fall back to a simple increment approach (the trigger handles average)
-    // We leave the DB trigger to handle average_rating recalculation.
-
-    setSubmitting(false);
-    setDone(true);
-
-    // Brief success state then close & award points
-    setTimeout(() => {
-      onRated();
-      onClose();
-    }, 1800);
   };
 
   const starLabel = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
@@ -190,7 +192,7 @@ const RatingPromptModal = ({ booking, onClose, onRated }: RatingPromptModalProps
             className="flex-1 h-12 rounded-2xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {submitting ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> Submitting review...</>
             ) : (
               <><Star className="w-4 h-4 fill-primary-foreground" /> Submit Review</>
             )}

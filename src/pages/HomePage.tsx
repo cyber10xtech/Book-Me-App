@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/components/BottomNav";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { categories as SERVICE_CATEGORIES } from "@/lib/categories";
 
@@ -120,6 +121,7 @@ const HomePage = () => {
 
   // ── Customer first name — pulled from profiles table, not metadata ──────────
   const [firstName, setFirstName] = useState<string>("");
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   useEffect(() => {
     if (!user) { setFirstName("Guest"); return; }
@@ -280,6 +282,24 @@ const HomePage = () => {
           <span className="text-sm text-white/70 flex-1 text-left">Find services near you...</span>
           <Search className="w-4 h-4 text-white/50" />
         </button>
+
+        {/* Location Pill */}
+        <button
+          onClick={() => setShowLocationModal(true)}
+          className="w-full mt-4 flex items-center justify-between rounded-2xl px-4 py-3 tap-scale"
+          style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-4 h-4 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-extrabold text-white leading-tight">Currently available in Owerri</p>
+              <p className="text-[10px] text-white/60">More cities coming soon</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-white/50" />
+        </button>
       </div>
 
       {/* ── Categories ── */}
@@ -296,7 +316,7 @@ const HomePage = () => {
               <div className="category-card-image rounded-2xl overflow-hidden" style={{ boxShadow: "var(--shadow-raised)" }}>
                 <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
               </div>
-              <span className="category-card-label text-[10px] font-bold text-foreground text-center leading-tight">{cat.name}</span>
+              <span className="category-card-label text-[11px] font-bold text-foreground text-center leading-tight">{cat.name}</span>
             </button>
           ))}
         </div>
@@ -386,6 +406,41 @@ const HomePage = () => {
       </div>
 
       <BottomNav />
+
+      {/* Location Modal */}
+      <Dialog open={showLocationModal} onOpenChange={setShowLocationModal}>
+        <DialogContent className="rounded-3xl max-w-sm w-[90vw] p-0 overflow-hidden bg-card border-0">
+          <DialogHeader className="p-5 pb-3 border-b border-border text-left">
+            <DialogTitle className="text-lg font-extrabold text-foreground">Our Locations</DialogTitle>
+          </DialogHeader>
+          <div className="p-2 space-y-1">
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-primary/10 border border-primary/20">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-extrabold text-foreground">Owerri, Imo State</p>
+                  <p className="text-[10px] font-semibold text-primary">Available now</p>
+                </div>
+              </div>
+            </div>
+            {[
+              { city: "Aba, Abia State" },
+              { city: "Port Harcourt, Rivers State" },
+              { city: "Uyo, Akwa Ibom State" },
+            ].map((loc) => (
+              <div key={loc.city} className="flex items-center justify-between p-4 rounded-2xl opacity-60 pointer-events-none">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-extrabold text-foreground">{loc.city}</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground">Coming soon</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

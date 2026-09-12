@@ -216,6 +216,8 @@ export type Database = {
           id: string
           is_promoted: boolean | null
           is_verified: boolean | null
+          latitude: number | null
+          longitude: number | null
           phone: string | null
           review_count: number | null
           role: Database["public"]["Enums"]["user_role"]
@@ -239,6 +241,8 @@ export type Database = {
           id?: string
           is_promoted?: boolean | null
           is_verified?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           review_count?: number | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -262,6 +266,8 @@ export type Database = {
           id?: string
           is_promoted?: boolean | null
           is_verified?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           review_count?: number | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -333,6 +339,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           price: number
+          pricing_type: string | null
           provider_id: string
         }
         Insert: {
@@ -343,6 +350,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price: number
+          pricing_type?: string | null
           provider_id: string
         }
         Update: {
@@ -353,6 +361,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          pricing_type?: string | null
           provider_id?: string
         }
         Relationships: [

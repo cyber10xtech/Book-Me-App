@@ -242,7 +242,7 @@ const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, reschedu
               <textarea value={rescheduleNote} onChange={e => setRescheduleNote(e.target.value)} placeholder="Why are you rescheduling? (Required)" rows={2} className="w-full rounded-xl bg-background p-3 text-sm resize-none outline-none focus:ring-2 focus:ring-primary" />
               <div className="flex gap-2">
                 <button onClick={() => setShowReschedule(false)} className="flex-1 h-11 rounded-xl text-sm font-bold" style={{ boxShadow: "var(--shadow-raised)" }}>Keep Date</button>
-                <button onClick={() => onReschedule(b.id, newDate, newTime, rescheduleNote)} disabled={rescheduling || !newDate || !newTime || !rescheduleNote.trim()} className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold disabled:opacity-60">{rescheduling ? "Checking…" : "Confirm"}</button>
+                <button onClick={() => onReschedule(b.id, newDate, newTime, rescheduleNote)} disabled={rescheduling || !newDate || !newTime || !rescheduleNote.trim()} className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold disabled:opacity-60">{rescheduling ? "Rescheduling..." : "Confirm"}</button>
               </div>
             </div>
           )}
@@ -272,7 +272,7 @@ const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, reschedu
                   className="flex-1 h-11 rounded-2xl text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 tap-scale"
                   style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", boxShadow: "3px 3px 10px rgba(239,68,68,0.35)" }}>
                   {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                  {cancelling ? "..." : "Yes, Cancel"}
+                  {cancelling ? "Cancelling..." : "Yes, Cancel"}
                 </button>
               </div>
             </div>
@@ -401,61 +401,85 @@ const BookingsPage = () => {
   const handleCancel = async (id: string, reason: string) => {
     if (!profileId) return;
     setCancelling(true);
-    const { data: updated, error } = await supabase.from("bookings")
-      .update({ 
-        status: "cancelled", 
-        cancelled_at: new Date().toISOString(), 
-        cancelled_by_role: "customer",
-        cancellation_reason: reason
-      } as any)
-      .eq("id", id).eq("customer_id", profileId)
-      .in("status", ["pending", "confirmed", "accepted", "rescheduled"])
-      .select("id");
-    
-    if (error) {
-      toast.error("Could not cancel: " + error.message);
-    } else if (!updated?.length) {
-      toast.error("This booking was already updated.");
-    } else {
-      toast.success("Booking cancelled.");
-      const booking = bookings.find(b => b.id === id);
-      if (booking?.business_user_id) {
-        await supabase.from("notifications").insert({
-          user_id: booking.business_user_id,
-          title: "Booking Cancelled",
-          body: `Booking #${id.slice(0,8).toUpperCase()} was cancelled. Reason: ${reason}`,
-          type: "booking_cancelled",
-          related_booking_id: id,
-          data: { booking_id: id, type: "booking_cancelled" },
-          is_read: false,
-        } as any);
+    try {
+      const { data: updated, error } = await supabase.from("bookings")
+        .update({ 
+          status: "cancelled", 
+          cancelled_at: new Date().toISOString(), 
+          cancelled_by_role: "customer",
+          cancellation_reason: reason
+        } as any)
+        .eq("id", id).eq("customer_id", profileId)
+        .in("status", ["pending", "confirmed", "accepted", "rescheduled"])
+        .select("id");
+      
+      if (error) {
+        toast.error("Could not cancel: " + error.message);
+      } else if (!updated?.length) {
+        toast.error("This booking was already updated.");
+      } else {
+        toast.success("Booking cancelled.");
+        const booking = bookings.find(b => b.id === id);
+        if (booking?.business_user_id) {
+          await supabase.from("notifications").insert({
+            user_id: booking.business_user_id,
+            title: "Booking Cancelled",
+            body: `Booking #${id.slice(0,8).toUpperCase()} was cancelled. Reason: ${reason}`,
+            type: "booking_cancelled",
+            related_booking_id: id,
+            data: { booking_id: id, type: "booking_cancelled" },
+            is_read: false,
+          } as any);
+        }
+        setSelected(null);
+        await fetchBookings(profileId);
       }
-      setSelected(null);
-      await fetchBookings(profileId);
+    } finally {
+      setCancelling(false);
     }
-    setCancelling(false);
   };
 
   const handleReschedule = async (id: string, date: string, time: string, note: string) => {
     if (!profileId || !date || !time || !note.trim()) return;
     setRescheduling(true);
-    const { data: conflict } = await supabase.from("bookings").select("id")
-      .eq("provider_id", bookings.find(b => b.id === id)?.provider_id)
-      .eq("booking_date", date).eq("booking_time", time)
-      .not("status", "in", "(cancelled,rejected)").neq("id", id).limit(1);
-    if (conflict?.length) { toast.error("That time is no longer available."); setRescheduling(false); return; }
-    const current = bookings.find(b => b.id === id);
-    const notes = [current?.notes, `Reschedule note: ${note.trim()}`].filter(Boolean).join("\n");
-    const { data: updated, error } = await supabase.from("bookings").update({
-      booking_date: date, booking_time: time, booking_time_text: time,
-      notes, status: "rescheduled", updated_at: new Date().toISOString(),
-    } as any).eq("id", id).eq("customer_id", profileId)
-      .in("status", ["pending", "confirmed", "accepted", "rescheduled"]).select("id");
-    if (error || !updated?.length) { toast.error(error?.message || "This booking was already updated."); setRescheduling(false); return; }
-    if (current?.business_user_id) await supabase.from("notifications").insert({
-      user_id: current.business_user_id, title: "Booking Rescheduled", body: `Booking #${id.slice(0, 8).toUpperCase()} moved to ${date} at ${time}. Reason: ${note.trim()}.`, type: "booking_rescheduled", related_booking_id: id, data: { booking_id: id, type: "booking_rescheduled" }, is_read: false,
-    } as any);
-    toast.success("Booking rescheduled."); setSelected(null); await fetchBookings(profileId); setRescheduling(false);
+    try {
+      const { data: conflict } = await supabase.from("bookings").select("id")
+        .eq("provider_id", bookings.find(b => b.id === id)?.provider_id)
+        .eq("booking_date", date).eq("booking_time", time)
+        .not("status", "in", "(cancelled,rejected)").neq("id", id).limit(1);
+      if (conflict?.length) {
+        toast.error("That time is no longer available.");
+        return;
+      }
+      const current = bookings.find(b => b.id === id);
+      const notes = [current?.notes, `Reschedule note: ${note.trim()}`].filter(Boolean).join("\n");
+      const { data: updated, error } = await supabase.from("bookings").update({
+        booking_date: date, booking_time: time, booking_time_text: time,
+        notes, status: "rescheduled", updated_at: new Date().toISOString(),
+      } as any).eq("id", id).eq("customer_id", profileId)
+        .in("status", ["pending", "confirmed", "accepted", "rescheduled"]).select("id");
+      
+      if (error || !updated?.length) {
+        toast.error(error?.message || "Could not reschedule booking.");
+      } else {
+        toast.success("Booking rescheduled.");
+        if (current?.business_user_id) {
+          await supabase.from("notifications").insert({
+            user_id: current.business_user_id,
+            title: "Booking Rescheduled",
+            body: `Booking #${id.slice(0,8).toUpperCase()} was rescheduled to ${date} at ${time}. Reason: ${note.trim()}.`,
+            type: "booking_rescheduled",
+            related_booking_id: id,
+            data: { booking_id: id, type: "booking_rescheduled" },
+            is_read: false,
+          } as any);
+        }
+        setSelected(null);
+        await fetchBookings(profileId);
+      }
+    } finally {
+      setRescheduling(false);
+    }
   };
 
   const upcoming = bookings.filter(b => ["pending","confirmed","accepted","rescheduled"].includes(b.status));
@@ -537,8 +561,8 @@ const BookingsPage = () => {
             const cfg = STATUS_CFG[b.status] ?? STATUS_CFG.pending;
             const today = isToday(b.booking_date);
             return (
-              <button key={b.id} onClick={() => setSelected(b)}
-                className="w-full rounded-3xl overflow-hidden text-left tap-scale animate-fade-in"
+              <div key={b.id} onClick={() => setSelected(b)}
+                className="w-full rounded-3xl overflow-hidden text-left tap-scale animate-fade-in cursor-pointer"
                 style={{ background: "hsl(var(--background))", boxShadow: "var(--shadow-raised)" }}>
                 <div className="h-1 w-full" style={{ background: cfg.stripColor }} />
                 <div className="p-4">
@@ -594,8 +618,18 @@ const BookingsPage = () => {
                     {cfg.badgeText}
                     {today && ["confirmed","accepted"].includes(b.status) && " · This is today!"}
                   </p>
+                  {b.status === "completed" && !b.has_reviewed && (
+                    <div className="mt-3" onClick={e => e.stopPropagation()}>
+                      <button onClick={(e) => { e.stopPropagation(); setRatingBooking(b); }}
+                        className="w-full h-10 rounded-xl font-bold text-sm flex items-center justify-center gap-2 tap-scale"
+                        style={{ background: "hsl(var(--primary))", boxShadow: "var(--shadow-raised)", color: "hsl(var(--primary-foreground))" }}>
+                        <Star className="w-4 h-4 fill-current" />
+                        Leave a Review
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </button>
+              </div>
             );
           })}
           </div>

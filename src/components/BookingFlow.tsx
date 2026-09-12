@@ -357,7 +357,7 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
     try {
       const { data: profile } = await supabase.from("profiles")
         .select("id,full_name,email,phone").eq("user_id", user.id).single();
-      if (!profile) { toast.error("Profile not found. Please sign in again."); setSubmitting(false); return; }
+      if (!profile) { toast.error("Profile not found. Please sign in again."); return; }
 
       const finalNotes = [
         notes,
@@ -392,7 +392,7 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
         status:            "confirmed",
       }).select("id").single();
 
-      if (error) { toast.error("Booking failed: " + error.message); setSubmitting(false); return; }
+      if (error) { toast.error("Booking failed: " + error.message); return; }
 
       // Automatically unlock messaging for this booking. A DB trigger (see
       // supabase/migrations/20260724120000_booking_messaging_window.sql) may
@@ -468,8 +468,9 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
       setSuccess(true);
     } catch (e: any) {
       toast.error("Error: " + e.message);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   // "Message Provider" — open the conversation created for this booking, or

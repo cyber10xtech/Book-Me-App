@@ -206,7 +206,7 @@ const SettingsPage = () => {
     try {
       // 1. Ensure we have an active, non-expired auth session before invoking function
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+
       let activeSession = session;
       if (!activeSession || sessionError) {
         // Attempt session refresh if missing or expired
@@ -242,7 +242,7 @@ const SettingsPage = () => {
               try {
                 const text = await errObj.context.clone().text();
                 console.error("[DeleteAccount] Edge function error response text:", text);
-              } catch (__) {}
+              } catch (__) { }
             }
           }
         } else {

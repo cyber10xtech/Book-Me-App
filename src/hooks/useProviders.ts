@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Database } from "@/integrations/supabase/types";
 
-export type ProviderProfile = Database["public"]["Tables"]["profiles"]["Row"];
+export type ProviderProfile = Database["public"]["Tables"]["profiles"]["Row"] & {
+  services?: { name: string; price: number; pricing_type?: string; is_active?: boolean }[];
+};
 export type Service = Database["public"]["Tables"]["services"]["Row"];
 
 export const useProviders = () => {
@@ -15,13 +17,22 @@ export const useProviders = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("*, services(name, price, is_active, description)")
         .eq("role", "provider")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .eq("services.is_active", true)
+        .range(0, 999);
 
       if (error) throw error;
       
-      const fetchedProviders = data || [];
+      const rawProviders = data || [];
+      const fetchedProviders = rawProviders.map(p => {
+        const services = (p.services || []).map((s: any) => ({
+          ...s,
+          pricing_type: s.pricing_type || "fixed"
+        }));
+        return { ...p, services };
+      });
       if (fetchedProviders.length === 0) {
         setProviders([]);
         return;

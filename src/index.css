@@ -308,7 +308,7 @@
   }
 
   .category-card {
-    width: clamp(4.25rem, 17vw, 4.75rem);
+    width: clamp(3.2rem, calc((100vw - 5.5rem) / 4.5), 5.8rem);
     scroll-snap-align: start;
   }
   .category-card-image {
