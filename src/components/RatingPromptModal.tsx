@@ -184,7 +184,7 @@ const RatingPromptModal = ({ booking, onClose, onRated }: RatingPromptModalProps
             onClick={onClose}
             className="flex-1 h-12 rounded-2xl border border-border text-sm font-semibold text-muted-foreground"
           >
-            Skip
+            Maybe Later
           </button>
           <button
             onClick={handleSubmit}

@@ -14,6 +14,37 @@ import { useReadableLocation } from "@/lib/readableLocation";
 
 type Tab = "upcoming" | "past";
 
+export interface BookingData {
+  id: string;
+  provider_id: string;
+  customer_id: string;
+  business_user_id?: string;
+  created_at: string;
+  status: string;
+  booking_date: string;
+  booking_time: string;
+  booking_time_text?: string;
+  service_name?: string;
+  provider_name?: string;
+  provider_phone?: string;
+  provider_avatar?: string;
+  provider_city?: string;
+  total_price?: number;
+  delivery_mode?: string;
+  customer_location?: string;
+  notes?: string;
+  has_reviewed?: boolean;
+  provider_attendance_outcome?: string;
+  provider_profile?: {
+    full_name?: string;
+    business_name?: string;
+    avatar_url?: string;
+    phone?: string;
+    city?: string;
+  };
+  reviews?: { id: string }[];
+}
+
 // Bug fix: added "accepted" as alias for confirmed
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; stripColor: string; badgeText: string }> = {
   pending:   { label: "Pending",   color: "hsl(38 92% 38%)",   bg: "hsl(38 100% 95%)",  stripColor: "#f59e0b", badgeText: "Awaiting confirmation"  },
@@ -35,7 +66,7 @@ const ReadableLocation = ({ value }: { value?: string | null }) => {
 };
 
 const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, rescheduling, onReview }: {
-  b: any; onClose: () => void;
+  b: BookingData; onClose: () => void;
   onCancel: (id: string, reason: string) => Promise<void>; cancelling: boolean;
   onReschedule: (id: string, date: string, time: string, note: string) => Promise<void>; rescheduling: boolean;
   onReview: () => void;
@@ -314,13 +345,13 @@ const BookingSheet = ({ b, onClose, onCancel, onReschedule, cancelling, reschedu
 
 const BookingsPage = () => {
   const [tab, setTab]             = useState<Tab>("upcoming");
-  const [bookings, setBookings]   = useState<any[]>([]);
+  const [bookings, setBookings]   = useState<BookingData[]>([]);
   const [loading, setLoading]     = useState(true);
-  const [selected, setSelected]   = useState<any | null>(null);
+  const [selected, setSelected]   = useState<BookingData | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
-  const [ratingBooking, setRatingBooking] = useState<any | null>(null);
+  const [ratingBooking, setRatingBooking] = useState<BookingData | null>(null);
   const promptedRef = useRef<Set<string>>(new Set());
   const channelRef  = useRef<RealtimeChannel | null>(null);
   const { user } = useAuth();
@@ -341,7 +372,7 @@ const BookingsPage = () => {
       .order("booking_date", { ascending: false })
       .order("booking_time", { ascending: true });
 
-    const enriched = (data || []).map((b: any) => ({
+    const enriched = (data || []).map((b: BookingData) => ({
       ...b,
       provider_name:   b.provider_profile?.business_name || b.provider_profile?.full_name,
       provider_phone:  b.provider_profile?.phone,
@@ -360,21 +391,28 @@ const BookingsPage = () => {
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
       if (!profile) { setLoading(false); return; }
       setProfileId(profile.id);
-      await fetchBookings(profile.id);
+      const initialBookings = await fetchBookings(profile.id);
+      
+      const unrated = initialBookings.find(
+        (b: BookingData) => b.status === "completed" && b.provider_attendance_outcome === "attended" && !b.has_reviewed
+      );
+      if (unrated) {
+        setRatingBooking(unrated);
+      }
 
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       channelRef.current = supabase
         .channel(`cust-bk:${profile.id}`)
         .on("postgres_changes",
           { event: "*", schema: "public", table: "bookings", filter: `customer_id=eq.${profile.id}` },
-          async (payload: any) => {
+          async (payload: { new: Partial<BookingData> | null; old: Partial<BookingData> | null }) => {
             const updated = await fetchBookings(profile.id);
-            if (payload.new?.status === "completed" && payload.old?.status !== "completed") {
+            if (payload.new?.status === "completed" && payload.new?.provider_attendance_outcome === "attended" && (!payload.old || payload.old.provider_attendance_outcome !== "attended" || payload.old.status !== "completed")) {
               const bid = payload.new.id;
               if (!promptedRef.current.has(bid)) {
                 promptedRef.current.add(bid);
-                const completedBooking = updated.find((b: any) => b.id === bid);
-                if (completedBooking) {
+                const completedBooking = updated.find((b: BookingData) => b.id === bid);
+                if (completedBooking && !completedBooking.has_reviewed) {
                   await awardPoints("booking_completed", bid);
                   const { count } = await supabase
                     .from("bookings").select("*", { count: "exact", head: true })
@@ -396,7 +434,7 @@ const BookingsPage = () => {
     })();
 
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); };
-  }, [user]);
+  }, [user, awardPoints]);
 
   const handleCancel = async (id: string, reason: string) => {
     if (!profileId) return;
@@ -408,7 +446,7 @@ const BookingsPage = () => {
           cancelled_at: new Date().toISOString(), 
           cancelled_by_role: "customer",
           cancellation_reason: reason
-        } as any)
+        })
         .eq("id", id).eq("customer_id", profileId)
         .in("status", ["pending", "confirmed", "accepted", "rescheduled"])
         .select("id");
@@ -429,7 +467,7 @@ const BookingsPage = () => {
             related_booking_id: id,
             data: { booking_id: id, type: "booking_cancelled" },
             is_read: false,
-          } as any);
+          });
         }
         setSelected(null);
         await fetchBookings(profileId);
@@ -456,7 +494,7 @@ const BookingsPage = () => {
       const { data: updated, error } = await supabase.from("bookings").update({
         booking_date: date, booking_time: time, booking_time_text: time,
         notes, status: "rescheduled", updated_at: new Date().toISOString(),
-      } as any).eq("id", id).eq("customer_id", profileId)
+      }).eq("id", id).eq("customer_id", profileId)
         .in("status", ["pending", "confirmed", "accepted", "rescheduled"]).select("id");
       
       if (error || !updated?.length) {
@@ -472,7 +510,7 @@ const BookingsPage = () => {
             related_booking_id: id,
             data: { booking_id: id, type: "booking_rescheduled" },
             is_read: false,
-          } as any);
+          });
         }
         setSelected(null);
         await fetchBookings(profileId);

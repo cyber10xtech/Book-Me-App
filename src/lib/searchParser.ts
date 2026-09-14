@@ -165,3 +165,117 @@ export function formatServicePriceLabel(svc: {
     badgeClass: "text-[11px] text-muted-foreground bg-secondary px-2.5 py-0.5 rounded-full font-bold border border-border/50" 
   };
 }
+
+export function calculateSearchScore(
+  activeServices: { name?: string; description?: string; [key: string]: unknown }[],
+  targetLower: string,
+  rawQueryLower: string,
+  pName: string,
+  pCat: string,
+  normalizedTarget: string
+) {
+  let matchScore = 0;
+  let matchReason = "";
+  let matchingServices = activeServices;
+  let matchesIntent = false;
+
+  const SCORE_EXACT_SERVICE = 1000;
+  const SCORE_EXACT_BUSINESS = 900;
+  const SCORE_SERVICE_PREFIX = 800;
+  const SCORE_BUSINESS_PREFIX = 700;
+  const SCORE_PARTIAL_SERVICE = 600;
+  const SCORE_PARTIAL_BUSINESS = 500;
+  const SCORE_EXACT_CATEGORY = 400;
+  const SCORE_PARTIAL_CATEGORY = 300;
+  const SCORE_DESC_MATCH = 200;
+  const SCORE_WEAK_MATCH = 100;
+
+  if (!targetLower) {
+    return { matchScore: 0, matchReason: "", matchingServices, matchesIntent: true };
+  }
+
+  const exactSvc = activeServices.find(s => isPluralOrSingularMatch(s.name, targetLower));
+  const partialSvc = activeServices.find(s => s.name?.toLowerCase().includes(targetLower));
+  
+  const getServiceDesc = (svc: { description?: string; [key: string]: unknown }): string => {
+    if (!svc.description) return "";
+    try {
+      return (JSON.parse(svc.description).description as string) || "";
+    } catch {
+      return svc.description as string;
+    }
+  };
+  const descSvc = activeServices.find(s => getServiceDesc(s).toLowerCase().includes(targetLower));
+
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[\s_]+/g, "-");
+
+  if (exactSvc) {
+    matchScore = SCORE_EXACT_SERVICE;
+    matchesIntent = true;
+    matchReason = `Offers ${exactSvc.name}`;
+    const matched = activeServices.filter(s => isPluralOrSingularMatch(s.name, targetLower));
+    const rest = activeServices.filter(s => !isPluralOrSingularMatch(s.name, targetLower));
+    matchingServices = [...matched, ...rest];
+  }
+  else if (pName === targetLower || pName === rawQueryLower) {
+    matchScore = SCORE_EXACT_BUSINESS;
+    matchesIntent = true;
+    matchReason = "Exact business match";
+    matchingServices = activeServices;
+  }
+  else if (activeServices.some(s => s.name?.toLowerCase().startsWith(targetLower))) {
+    const prefixSvc = activeServices.find(s => s.name?.toLowerCase().startsWith(targetLower));
+    matchScore = SCORE_SERVICE_PREFIX;
+    matchesIntent = true;
+    matchReason = prefixSvc ? `Offers ${prefixSvc.name}` : "Service match";
+    const matched = activeServices.filter(s => s.name?.toLowerCase().startsWith(targetLower));
+    const rest = activeServices.filter(s => !s.name?.toLowerCase().startsWith(targetLower));
+    matchingServices = [...matched, ...rest];
+  }
+  else if (pName.startsWith(targetLower) || pName.startsWith(rawQueryLower)) {
+    matchScore = SCORE_BUSINESS_PREFIX;
+    matchesIntent = true;
+    matchReason = "Business match";
+    matchingServices = activeServices;
+  }
+  else if (partialSvc) {
+    matchScore = SCORE_PARTIAL_SERVICE;
+    matchesIntent = true;
+    matchReason = `Offers ${partialSvc.name}`;
+    const matched = activeServices.filter(s => s.name?.toLowerCase().includes(targetLower));
+    const rest = activeServices.filter(s => !s.name?.toLowerCase().includes(targetLower));
+    matchingServices = [...matched, ...rest];
+  }
+  else if (pName.includes(targetLower) || pName.includes(rawQueryLower)) {
+    matchScore = SCORE_PARTIAL_BUSINESS;
+    matchesIntent = true;
+    matchReason = "Business match";
+    matchingServices = activeServices;
+  }
+  else if (pCat === normalizedTarget || norm(pCat) === norm(targetLower)) {
+    matchScore = SCORE_EXACT_CATEGORY;
+    matchesIntent = true;
+    matchReason = `${pCat || 'Category'} match`;
+    matchingServices = activeServices;
+  }
+  else if (pCat.includes(targetLower) || normalizedTarget.includes(pCat)) {
+    matchScore = SCORE_PARTIAL_CATEGORY;
+    matchesIntent = true;
+    matchReason = `${pCat || 'Category'} match`;
+    matchingServices = activeServices;
+  }
+  else if (descSvc) {
+    matchScore = SCORE_DESC_MATCH;
+    matchesIntent = true;
+    matchReason = `Offers ${descSvc.name}`;
+    const matched = activeServices.filter(s => getServiceDesc(s).toLowerCase().includes(targetLower));
+    const rest = activeServices.filter(s => !getServiceDesc(s).toLowerCase().includes(targetLower));
+    matchingServices = [...matched, ...rest];
+  } else {
+    matchScore = SCORE_WEAK_MATCH;
+    matchesIntent = false; 
+  }
+
+  return { matchScore, matchReason, matchingServices, matchesIntent };
+}
+

@@ -10,7 +10,7 @@
  *    card.  Tapping opens the full WhatsApp-style ChatWindow.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Share, Heart, Star, MapPin, Plus, Clock,
@@ -41,7 +41,7 @@ const defaultCover = "https://images.unsplash.com/photo-1521590832167-7bcbfaa638
 // within today's open window. If business_hours is null/missing, defaults to open.
 const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"] as const;
 
-function isBusinessOpen(provider: any): boolean {
+function isBusinessOpen(provider: { is_active?: boolean; business_hours?: unknown } | null | undefined): boolean {
   if (!provider) return false;
   if (provider.is_active === false) return false;
 
@@ -50,7 +50,7 @@ function isBusinessOpen(provider: any): boolean {
 
   const now = new Date();
   const dayKey = DAY_NAMES[now.getDay()];
-  const todayHours = (hours as Record<string, any>)[dayKey];
+  const todayHours = (hours as Record<string, { closed?: boolean; open?: string; close?: string } | undefined>)[dayKey];
 
   if (!todayHours) return true;          // day not configured → assume open
   if (todayHours.closed === true) return false; // explicitly marked closed
@@ -67,28 +67,28 @@ function isBusinessOpen(provider: any): boolean {
   return nowMinutes >= toMinutes(open) && nowMinutes < toMinutes(close);
 }
 
-function getClosedLabel(provider: any): string {
+function getClosedLabel(provider: { is_active?: boolean; business_hours?: unknown } | null | undefined): string {
   if (!provider) return "Currently Unavailable";
   if (provider.is_active === false) return "Business Inactive";
   const hours = provider.business_hours;
   if (!hours || typeof hours !== "object") return "Currently Unavailable";
   const dayKey = DAY_NAMES[new Date().getDay()];
-  const todayHours = (hours as Record<string, any>)[dayKey];
+  const todayHours = (hours as Record<string, { closed?: boolean; open?: string; close?: string } | undefined>)[dayKey];
   if (todayHours?.closed === true) return "Closed Today";
   if (todayHours?.open && todayHours?.close)
     return `Open ${todayHours.open} – ${todayHours.close}`;
   return "Currently Unavailable";
 }
 
-const getServiceImages = (svc: any): string[] => {
+const getServiceImages = (svc: { description?: string } | null | undefined): string[] => {
   try { return JSON.parse(svc.description || "{}").imageUrls || []; } catch { return []; }
 };
-const getServiceMeta = (svc: any) => {
+const getServiceMeta = (svc: { description?: string } | null | undefined) => {
   try { return JSON.parse(svc.description || "{}"); } catch { return {}; }
 };
 // Returns the plain-text description for a service regardless of whether
 // the `description` column stores raw text or a JSON blob.
-const getServiceDescription = (svc: any): string => {
+const getServiceDescription = (svc: { description?: string } | null | undefined): string => {
   if (!svc.description) return "";
   try {
     const parsed = JSON.parse(svc.description);
@@ -99,7 +99,7 @@ const getServiceDescription = (svc: any): string => {
     return svc.description as string;
   }
 };
-const formatPrice = (svc: any): string => {
+const formatPrice = (svc: { price?: number; description?: string } | null | undefined): string => {
   const meta = getServiceMeta(svc);
   if (meta.pricingType === "range" && meta.maxPrice)
     return `₦${Number(svc.price).toLocaleString()} – ₦${Number(meta.maxPrice).toLocaleString()}`;
@@ -291,7 +291,7 @@ const ServiceDetailSheet = ({
   onBook,
   isOpen: businessOpen,
   closedLabel: businessClosedLabel,
-}: { svc: any; onClose: () => void; onBook: () => void; isOpen: boolean; closedLabel: string }) => {
+}: { svc: Record<string, unknown>; onClose: () => void; onBook: () => void; isOpen: boolean; closedLabel: string }) => {
   // Primary image: prefer direct image_url column, fall back to JSON gallery
   const directImg   = svc.image_url || null;
   const jsonImgs    = getServiceImages(svc);
@@ -429,7 +429,7 @@ const ProviderProfilePage = () => {
           token = data.token;
         }
 
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Record<string, unknown>).MSStream;
         const isAndroid = /android/i.test(navigator.userAgent);
 
         if (isAndroid) {
@@ -459,16 +459,9 @@ const ProviderProfilePage = () => {
     runFallback();
   }, [id]);
 
-  if (isRedirecting) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "hsl(var(--background))" }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "hsl(var(--primary))" }} />
-        <p className="text-sm text-muted-foreground animate-pulse">Redirecting to app store...</p>
-      </div>
-    );
-  }
 
   const [activeTab,       setActiveTab]       = useState<Tab>("services");
+  const [scrollPending,   setScrollPending]   = useState(false);
   const [bookingService,  setBookingService]   = useState<string | null>(null);
   const [lightbox,        setLightbox]         = useState<string | null>(null);
   const [isFav,           setIsFav]            = useState(false);
@@ -480,17 +473,17 @@ const ProviderProfilePage = () => {
   const [galleryLoading,  setGalLoading]       = useState(false);
 
   // Reviews — per-booking tracking
-  const [reviews,         setReviews]          = useState<any[]>([]);
+  const [reviews,         setReviews]          = useState<Record<string, unknown>[]>([]);
   const [reviewsLoading,  setRevLoading]       = useState(false);
   const [ratingBars,      setRatingBars]       = useState<{ star: number; count: number; pct: number }[]>([]);
-  const [completedBks,    setCompBks]          = useState<{ id: string; service_name?: string; booking_date?: string }[]>([]);
+  const [completedBks,    setCompBks]          = useState<{ id: string; service_name?: string; booking_date?: string; provider_attendance_outcome?: string; status?: string; attendance_confirmed_at?: string }[]>([]);
   const [reviewedIds,     setReviewedIds]      = useState<Set<string>>(new Set());
   const [showWriteReview, setShowWrite]        = useState(false);
   const [pickerOpen,      setPickerOpen]       = useState(false);
   const [selectedBk,      setSelectedBk]       = useState<{ id: string; service_name?: string } | null>(null);
 
   // Service detail sheet
-  const [selectedService, setSelectedService]  = useState<any | null>(null);
+  const [selectedService, setSelectedService]  = useState<Record<string, unknown> | null>(null);
 
   // Chat
   const [chatConvId,      setChatConvId]       = useState<string | null>(null);
@@ -506,7 +499,7 @@ const ProviderProfilePage = () => {
   const [liveCount,       setLiveCount]        = useState<number | null>(null);
 
   const { provider, services, loading } = useProviderDetail(id || "");
-  const providerRecord = provider as any;
+  const providerRecord = provider as Record<string, unknown>;
   const readableProviderLocation = useReadableLocation({
     address: providerRecord?.address,
     city: providerRecord?.city,
@@ -538,7 +531,7 @@ const ProviderProfilePage = () => {
   useEffect(() => {
     if (!profileId || !id) return;
     supabase.from("bookings")
-      .select("id, service_name, booking_date")
+      .select("id, service_name, booking_date, provider_attendance_outcome, status, attendance_confirmed_at")
       .eq("customer_id", profileId)
       .eq("provider_id", id)
       .eq("status", "completed")
@@ -548,7 +541,7 @@ const ProviderProfilePage = () => {
       .select("booking_id")
       .eq("customer_id", profileId)
       .eq("provider_id", id)
-      .then(({ data }) => setReviewedIds(new Set((data || []).map((r: any) => r.booking_id))));
+      .then(({ data }) => setReviewedIds(new Set((data || []).map((r: { booking_id: string }) => r.booking_id))));
   }, [profileId, id]);
 
   // Check for an active booking with this provider — gates the phone number
@@ -630,8 +623,22 @@ const ProviderProfilePage = () => {
       .then(({ data }) => { setGallery(data || []); setGalLoading(false); });
   }, [provider, activeTab]);
 
+  // Render-aware scroll for Services tab
+  const servicesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (activeTab === "services" && scrollPending) {
+      requestAnimationFrame(() => {
+        const el = document.getElementById("services-section");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+          setScrollPending(false);
+        }
+      });
+    }
+  }, [activeTab, scrollPending]);
+
   // Fetch reviews when tab active
-  const loadReviews = async () => {
+  const loadReviews = useCallback(async () => {
     if (!provider) return;
     setRevLoading(true);
     const { data } = await supabase.from("reviews")
@@ -642,21 +649,21 @@ const ProviderProfilePage = () => {
     const rv = data || [];
     setReviews(rv);
     const bars = [5, 4, 3, 2, 1].map(star => {
-      const count = rv.filter((r: any) => r.rating === star).length;
+      const count = rv.filter((r: { rating: number }) => r.rating === star).length;
       return { star, count, pct: rv.length ? Math.round((count / rv.length) * 100) : 0 };
     });
     setRatingBars(bars);
     if (rv.length > 0) {
-      const avg = rv.reduce((s: number, r: any) => s + r.rating, 0) / rv.length;
+      const avg = rv.reduce((s: number, r: { rating: number }) => s + r.rating, 0) / rv.length;
       setLiveRating(Math.round(avg * 10) / 10);
       setLiveCount(rv.length);
     }
     setRevLoading(false);
-  };
+  }, [provider]);
 
   useEffect(() => {
     if (activeTab === "reviews") loadReviews();
-  }, [provider, activeTab]);
+  }, [activeTab, loadReviews]);
 
   // Toggle favourite — the calling button is gated by requireAuth, so `user`
   // is guaranteed here; this guard is just defense-in-depth.
@@ -678,7 +685,7 @@ const ProviderProfilePage = () => {
     if (!provider) return;
     const result = await shareProvider({
       providerId: provider.id,
-      providerSlug: (provider as any).slug ?? null,
+      providerSlug: (provider as Record<string, unknown>).slug ?? null,
       providerName: provider.business_name || provider.full_name || "Provider",
       ref: "profile_share",
       utmCampaign: "organic_share",
@@ -699,17 +706,49 @@ const ProviderProfilePage = () => {
   };
 
   // How many unrated completed bookings remain
-  const unratedCount = completedBks.filter(b => !reviewedIds.has(b.id)).length;
+  // New review policy:
+  // - no_show is never eligible
+  // - New completed bookings require attended
+  // - Historical completed bookings within 14 days may use the old rule
+  // - Older historical bookings are excluded
+  // - Existing reviews are excluded
+  const eligibleBks = completedBks.filter((b: { id: string; provider_attendance_outcome?: string; booking_date?: string }) => {
+    if (reviewedIds.has(b.id)) return false;
+    if (b.provider_attendance_outcome === 'no_show') return false;
+    
+    // Parse booking date
+    const bDate = new Date(b.booking_date + "T00:00:00");
+    const now = new Date();
+    const daysOld = (now.getTime() - bDate.getTime()) / (1000 * 3600 * 24);
+
+    if (b.provider_attendance_outcome === 'attended') return true;
+
+    // If outcome is null or something else, check if it's within 14 days historical
+    if (daysOld <= 14 && b.provider_attendance_outcome == null) return true;
+    
+    return false;
+  });
+
+  const unratedCount = eligibleBks.length;
 
   const handleReviewBtnClick = () => {
     if (unratedCount === 0) return;
     if (unratedCount === 1) {
-      setSelectedBk(completedBks.find(b => !reviewedIds.has(b.id))!);
+      setSelectedBk(eligibleBks[0]);
       setShowWrite(true);
     } else {
       setPickerOpen(true);
     }
   };
+
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "hsl(var(--background))" }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "hsl(var(--primary))" }} />
+        <p className="text-sm text-muted-foreground animate-pulse">Redirecting to app store...</p>
+      </div>
+    );
+  }
 
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "hsl(var(--background))" }}>
@@ -891,7 +930,9 @@ const ProviderProfilePage = () => {
               onClick={() => {
                 if (!isOpen) { toast.error(`Booking unavailable — ${closedLabel}`); return; }
                 if (services.length === 0) { toast.error("No services available"); return; }
-                requireAuth(() => setBookingService(services[0].id), "make a booking");
+                
+                setActiveTab("services");
+                setScrollPending(true);
               }}
               className="flex-1 h-[52px] rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 tap-scale"
               style={
@@ -916,7 +957,7 @@ const ProviderProfilePage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="px-5 mt-5">
+      <div className="px-5 mt-5" id="services-section" style={{ scrollMarginTop: "120px" }}>
         <div className="flex gap-1.5 p-1.5 rounded-3xl" style={{ background: "hsl(var(--background))", boxShadow: "var(--shadow-inset)" }}>
           {tabs.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
@@ -1174,7 +1215,7 @@ const ProviderProfilePage = () => {
               </div>
             ) : (
               <div className="adaptive-card-grid">
-              {reviews.map((r: any) => {
+              {reviews.map((r: { id: string; customer?: { full_name?: string }; customer_name?: string; service_name?: string; rating: number; comment?: string; created_at: string }) => {
                 const name = r.customer?.full_name || r.customer_name || "Anonymous";
                 return (
                   <div key={r.id} className="rounded-3xl p-4 animate-fade-in"
@@ -1243,3 +1284,4 @@ const ProviderProfilePage = () => {
 };
 
 export default ProviderProfilePage;
+

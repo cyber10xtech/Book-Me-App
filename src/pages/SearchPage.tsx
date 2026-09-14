@@ -10,7 +10,7 @@ import BottomNav from "@/components/BottomNav";
 import { useProviders } from "@/hooks/useProviders";
 import { categories as CATEGORIES } from "@/lib/categories";
 import { StateSelector } from "@/components/common/StateSelector";
-import { parseQuery, normalizeTarget, isPluralOrSingularMatch, formatServicePriceLabel } from "@/lib/searchParser";
+import { parseQuery, normalizeTarget, isPluralOrSingularMatch, formatServicePriceLabel, calculateSearchScore } from "@/lib/searchParser";
 import { NIGERIA_STATES } from "@/data/nigeriaLocations";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -172,7 +172,7 @@ const SearchPage = () => {
       if (!p.services || p.services.length === 0) {
         matchesPrice = false;
       } else {
-        matchesPrice = p.services.some((s: any) => {
+        matchesPrice = p.services.some((s: { pricing_type?: string; price?: number }) => {
           if (s.pricing_type === 'inspection_required') return false;
           const pVal = s.price;
           if (pVal == null || isNaN(pVal) || pVal <= 0) return false;
@@ -184,7 +184,7 @@ const SearchPage = () => {
     }
 
     // Active Services
-    const activeServices = (p.services || []).filter((s: any) => s.is_active !== false);
+    const activeServices = (p.services || []).filter((s: { is_active?: boolean }) => s.is_active !== false);
 
     // Intent Match (Target) & Ranking
     let matchesIntent = false;
@@ -198,62 +198,12 @@ const SearchPage = () => {
       }
     } else {
       const targetLower = target.toLowerCase().trim();
-
-      // Priority 1: Exact business-name match
-      if (pName === targetLower || pName === rawQueryLower) {
-        matchScore = 1000;
-        matchesIntent = true;
-        matchReason = "Exact business match";
-        matchingServices = activeServices;
-      }
-      // Priority 2: Business name starts with target
-      else if (pName.startsWith(targetLower) || pName.startsWith(rawQueryLower)) {
-        matchScore = 800;
-        matchesIntent = true;
-        matchReason = "Business match";
-        matchingServices = activeServices;
-      }
-      // Priority 3: Partial business-name match
-      else if (pName.includes(targetLower) || pName.includes(rawQueryLower)) {
-        matchScore = 600;
-        matchesIntent = true;
-        matchReason = "Business match";
-        matchingServices = activeServices;
-      }
-      // Priority 4: Exact or singular/plural service-name match
-      else if (activeServices.some(s => isPluralOrSingularMatch(s.name, targetLower))) {
-        const exactSvc = activeServices.find(s => isPluralOrSingularMatch(s.name, targetLower));
-        matchScore = 400;
-        matchesIntent = true;
-        matchReason = exactSvc ? `Offers ${exactSvc.name}` : `Service match`;
-        const matched = activeServices.filter(s => isPluralOrSingularMatch(s.name, targetLower));
-        const rest = activeServices.filter(s => !isPluralOrSingularMatch(s.name, targetLower));
-        matchingServices = [...matched, ...rest];
-      }
-      // Priority 5: Exact category match
-      else if (pCat === normalizedTarget || norm(p.category) === norm(targetLower)) {
-        matchScore = 300;
-        matchesIntent = true;
-        matchReason = `${p.category || 'Category'} match`;
-        matchingServices = activeServices;
-      }
-      // Priority 6: Partial service or category match
-      else {
-        const partialSvc = activeServices.find(s => s.name?.toLowerCase().includes(targetLower));
-        if (partialSvc) {
-          matchScore = 200;
-          matchesIntent = true;
-          matchReason = `Offers ${partialSvc.name}`;
-          const matched = activeServices.filter(s => s.name?.toLowerCase().includes(targetLower));
-          const rest = activeServices.filter(s => !s.name?.toLowerCase().includes(targetLower));
-          matchingServices = [...matched, ...rest];
-        } else if (pCat.includes(targetLower) || normalizedTarget.includes(pCat)) {
-          matchScore = 200;
-          matchesIntent = true;
-          matchReason = `${p.category || 'Category'} match`;
-          matchingServices = activeServices;
-        }
-      }
+      const result = calculateSearchScore(activeServices, targetLower, rawQueryLower, pName, pCat, normalizedTarget);
+      
+      matchScore = result.matchScore;
+      matchReason = result.matchReason;
+      matchingServices = result.matchingServices;
+      matchesIntent = result.matchesIntent;
     }
 
     const distance = (userLoc && p.latitude && p.longitude)
@@ -284,13 +234,13 @@ const SearchPage = () => {
 
       if (sortBy === "reviews") return (b.p.review_count || 0) - (a.p.review_count || 0);
       if (sortBy === "price_asc") {
-        const minA = a.p.services && a.p.services.length > 0 ? Math.min(...a.p.services.map((s: any) => s.price || 0)) : Infinity;
-        const minB = b.p.services && b.p.services.length > 0 ? Math.min(...b.p.services.map((s: any) => s.price || 0)) : Infinity;
+        const minA = a.p.services && a.p.services.length > 0 ? Math.min(...a.p.services.map((s: { price?: number }) => s.price || 0)) : Infinity;
+        const minB = b.p.services && b.p.services.length > 0 ? Math.min(...b.p.services.map((s: { price?: number }) => s.price || 0)) : Infinity;
         return minA - minB;
       }
       if (sortBy === "price_desc") {
-        const maxA = a.p.services && a.p.services.length > 0 ? Math.max(...a.p.services.map((s: any) => s.price || 0)) : -1;
-        const maxB = b.p.services && b.p.services.length > 0 ? Math.max(...b.p.services.map((s: any) => s.price || 0)) : -1;
+        const maxA = a.p.services && a.p.services.length > 0 ? Math.max(...a.p.services.map((s: { price?: number }) => s.price || 0)) : -1;
+        const maxB = b.p.services && b.p.services.length > 0 ? Math.max(...b.p.services.map((s: { price?: number }) => s.price || 0)) : -1;
         return maxB - maxA;
       }
 
@@ -792,3 +742,4 @@ const SearchPage = () => {
 };
 
 export default SearchPage;
+
