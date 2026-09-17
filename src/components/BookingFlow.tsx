@@ -262,7 +262,7 @@ const BookingFlow = ({ providerId, serviceId, onClose }: BookingFlowProps) => {
   useEffect(() => {
     (async () => {
       const [p, s, prof] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", providerId).single(),
+        supabase.from("profiles").select("*").eq("id", providerId).eq("role", "provider").single(),
         supabase.from("services").select("*").eq("id", serviceId).single(),
         user ? supabase.from("profiles").select("id").eq("user_id", user.id).single() : null,
       ]);

@@ -135,6 +135,7 @@ export const useProviderDetail = (id: string) => {
           .from("profiles")
           .select("*")
           .eq("id", id)
+          .eq("role", "provider")
           .single();
 
         if (profileError) throw profileError;

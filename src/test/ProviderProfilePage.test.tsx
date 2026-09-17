@@ -119,4 +119,23 @@ describe("ProviderProfilePage - Book Now CTA", () => {
     const { toast } = await import("sonner");
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Business Inactive"));
   });
+
+  it("renders Provider not found and blocks booking if profile role is customer (incomplete incident record)", async () => {
+    const { useProviderDetail } = await import("@/hooks/useProviders");
+    vi.mocked(useProviderDetail).mockReturnValue({
+      provider: { ...mockProvider, role: "customer" } as any,
+      services: mockServices as any,
+      loading: false
+    });
+
+    render(
+      <MemoryRouter>
+        <ProviderProfilePage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("Provider not found")).toBeInTheDocument();
+    expect(screen.queryByText("Book Now")).not.toBeInTheDocument();
+    expect(screen.queryByText("Haircut")).not.toBeInTheDocument();
+  });
 });

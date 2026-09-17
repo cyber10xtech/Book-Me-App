@@ -756,7 +756,7 @@ const ProviderProfilePage = () => {
       <p className="text-sm text-muted-foreground animate-pulse">Loading profile…</p>
     </div>
   );
-  if (!provider) return (
+  if (!provider || provider.role === "customer") return (
     <div className="min-h-screen flex items-center justify-center text-muted-foreground" style={{ background: "hsl(var(--background))" }}>
       Provider not found
     </div>
