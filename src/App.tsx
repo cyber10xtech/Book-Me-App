@@ -18,7 +18,7 @@ import { useDeepLinkRouter } from "@/hooks/useDeepLinkRouter";
 import { useDeferredDeepLink } from "@/hooks/useDeferredDeepLink";
 import { UpdateDialog } from "@/components/UpdateDialog";
 import DeactivatedScreen from "@/components/DeactivatedScreen";
-
+import { ThemeProvider } from "./components/common/ThemeProvider";
 
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -37,6 +37,11 @@ import LoyaltyPointsPage from "./pages/LoyaltyPointsPage";
 import HelpSupportPage from "./pages/HelpSupportPage";
 import SettingsPage from "./pages/SettingsPage";
 import PrivacySecurityPage from "./pages/PrivacySecurityPage";
+
+import RecoveryEmail from "./pages/RecoveryEmail";
+import RecoveryOTP from "./pages/RecoveryOTP";
+import RecoveryNewPassword from "./pages/RecoveryNewPassword";
+import RecoverySuccess from "./pages/RecoverySuccess";
 
 const queryClient = new QueryClient();
 
@@ -251,6 +256,10 @@ const AppContent = () => {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/privacy-security" element={<PrivacySecurityPage />} />
           <Route path="/help" element={<HelpSupportPage />} />
+          <Route path="/recover-password/email" element={<RecoveryEmail />} />
+          <Route path="/recover-password/otp" element={<RecoveryOTP />} />
+          <Route path="/recover-password/new" element={<RecoveryNewPassword />} />
+          <Route path="/recover-password/success" element={<RecoverySuccess />} />
 
           {/* ── Protected routes — user-owned data, require a real account ─── */}
           <Route path="/bookings" element={<AuthGuard><BookingsPage /></AuthGuard>} />
