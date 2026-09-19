@@ -51,15 +51,8 @@ const SignIn = () => {
     navigate("/home", { replace: true });
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) { toast.error("Enter your email address first."); return; }
-    setResettingPw(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setResettingPw(false);
-    if (error) toast.error(error.message);
-    else toast.success("Password reset email sent! Check your inbox.");
+  const handleForgotPassword = () => {
+    navigate("/recover-password/email");
   };
 
   const neuInput: React.CSSProperties = {
@@ -115,6 +108,7 @@ const SignIn = () => {
             </div>
             <input
               type="email" inputMode="email"
+              autoComplete="username"
               placeholder="you@example.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -135,6 +129,7 @@ const SignIn = () => {
             </div>
             <input
               type={showPw ? "text" : "password"}
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import RecoveryEmail from "../pages/RecoveryEmail";
 import RecoveryOTP from "../pages/RecoveryOTP";
 import RecoveryNewPassword from "../pages/RecoveryNewPassword";
@@ -82,6 +82,37 @@ describe("Password Recovery Flow", () => {
         expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledTimes(1);
       });
     });
+
+    it("navigates to OTP on successful email submission using replace", async () => {
+      vi.mocked(supabase.auth.resetPasswordForEmail).mockResolvedValue({ data: {}, error: null } as any);
+      
+      let testLocation: any;
+      const LocationSpy = () => {
+        testLocation = useLocation();
+        return null;
+      };
+
+      render(
+        <MemoryRouter initialEntries={["/recover-password/email"]}>
+          <Routes>
+            <Route path="/recover-password/email" element={<><RecoveryEmail /><LocationSpy /></>} />
+            <Route path="/recover-password/otp" element={<LocationSpy />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      
+      const input = screen.getByPlaceholderText("you@example.com");
+      fireEvent.change(input, { target: { value: "valid@example.com" } });
+      
+      const button = screen.getByRole("button", { name: "Send verification code" });
+      fireEvent.click(button);
+      
+      await waitFor(() => {
+        expect(testLocation.pathname).toBe("/recover-password/otp");
+        expect(sessionStorage.getItem("recovery_stage")).toBe("otp");
+        expect(sessionStorage.getItem("recovery_email")).toBe("valid@example.com");
+      });
+    });
   });
 
   describe("RecoveryOTP", () => {
@@ -128,6 +159,29 @@ describe("Password Recovery Flow", () => {
       
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("Incorrect code. Please try again.");
+      });
+    });
+
+    it("safely redirects to email if state is missing (synchronous guard)", async () => {
+      sessionStorage.clear();
+      
+      let testLocation: any;
+      const LocationSpy = () => {
+        testLocation = useLocation();
+        return null;
+      };
+
+      render(
+        <MemoryRouter initialEntries={["/recover-password/otp"]}>
+          <Routes>
+            <Route path="/recover-password/otp" element={<><RecoveryOTP /><LocationSpy /></>} />
+            <Route path="/recover-password/email" element={<LocationSpy />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      
+      await waitFor(() => {
+        expect(testLocation.pathname).toBe("/recover-password/email");
       });
     });
   });

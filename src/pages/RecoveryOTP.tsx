@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -20,12 +20,8 @@ export default function RecoveryOTP() {
     ? `${email.charAt(0)}***@${email.split("@")[1]}`
     : "";
 
-  useEffect(() => {
-    if (!email || stage !== "otp") {
-      navigate("/recover-password/email", { replace: true });
-      return;
-    }
 
+  useEffect(() => {
     const checkCooldown = () => {
       const stored = sessionStorage.getItem("recovery_resend_cooldown");
       if (stored) {
@@ -36,7 +32,12 @@ export default function RecoveryOTP() {
     checkCooldown();
     const interval = setInterval(checkCooldown, 1000);
     return () => clearInterval(interval);
-  }, [email, stage, navigate]);
+  }, [navigate]);
+
+  // Early exit if state is invalid (prevents history loops during back navigation)
+  if (!email || stage !== "otp") {
+    return <Navigate to="/recover-password/email" replace />;
+  }
 
   const verifyOTP = async (code: string) => {
     if (isVerifying.current || !email) return;

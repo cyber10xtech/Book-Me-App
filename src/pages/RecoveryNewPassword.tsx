@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -31,17 +31,13 @@ export default function RecoveryNewPassword() {
 
   useEffect(() => {
     const checkSession = async () => {
-      if (!email || stage !== "new_password") {
-        navigate("/recover-password/email", { replace: true });
-        return;
-      }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/recover-password/email", { replace: true });
       }
     };
     checkSession();
-  }, [email, stage, navigate]);
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +62,9 @@ export default function RecoveryNewPassword() {
     }
   };
 
-  if (!email || stage !== "new_password") return null;
+  if (!email || stage !== "new_password") {
+    return <Navigate to="/recover-password/email" replace />;
+  }
 
   return (
     <div
